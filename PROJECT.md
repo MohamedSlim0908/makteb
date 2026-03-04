@@ -528,6 +528,84 @@ chore/<nom>   →  tooling, config, deps
 
 ---
 
+#### Sprint 5 — Profils & Réseaux sociaux
+**Objectif : enrichir les profils utilisateurs et la dimension sociale**
+
+| Membre | Tâches |
+|---|---|
+| M1 | Page profil public (`/u/:username`), liste des communautés rejointes, cours en cours, badges obtenus |
+| M2 | Endpoint profil public, endpoint `GET /api/users/:id/stats`, système de badge par niveau |
+| M3 | Système de suivi (follow/unfollow) : modèle `UserFollow`, endpoints + UI |
+
+**Livrables :** Page profil complète, suivi d'utilisateurs
+
+---
+
+#### Sprint 6 — Recherche & Découverte
+**Objectif : permettre aux utilisateurs de trouver facilement contenu et communautés**
+
+| Membre | Tâches |
+|---|---|
+| M1 | Page Discover améliorée (filtres par catégorie, tri, recherche en temps réel avec debounce) |
+| M2 | Recherche full-text PostgreSQL sur communautés, cours et posts (`tsvector` + `to_tsquery`) |
+| M3 | Page de résultats unifiée, mise en avant des communautés tendance (basé sur activité récente) |
+
+**Livrables :** Recherche full-text fonctionnelle, découverte enrichie
+
+---
+
+#### Sprint 7 — Éditeur de contenu avancé
+**Objectif : offrir une expérience de création de contenu riche**
+
+| Membre | Tâches |
+|---|---|
+| M1 | Éditeur Tiptap avancé (images inline, blocs de code, tableaux, mentions `@user`) |
+| M2 | Upload d'image inline dans l'éditeur (endpoint dédié Cloudinary), gestion des mentions en BDD |
+| M3 | Prévisualisation en temps réel du contenu, mode lecture optimisé (typographie) |
+
+**Livrables :** Éditeur riche opérationnel, images dans les posts et leçons
+
+---
+
+#### Sprint 8 — Analytics & Tableau de bord créateur
+**Objectif : donner aux créateurs de communauté des insights sur leur contenu**
+
+| Membre | Tâches |
+|---|---|
+| M1 | Dashboard créateur : graphiques revenus, inscriptions, activité membres (recharts ou Chart.js) |
+| M2 | Endpoints analytics : évolution des inscriptions, revenus par période, taux de complétion des cours |
+| M3 | Export CSV des données, rapport hebdomadaire par email (job BullMQ) |
+
+**Livrables :** Dashboard analytics créateur, emails automatisés
+
+---
+
+#### Sprint 9 — Performance & Accessibilité
+**Objectif : optimiser l'application pour la production**
+
+| Membre | Tâches |
+|---|---|
+| M1 | Audit accessibilité (ARIA, navigation clavier, contrastes), lazy loading des pages (React.lazy) |
+| M2 | Mise en cache Redis sur les routes fréquentes (leaderboard, liste communautés), indexes BDD supplémentaires |
+| M3 | Audit Lighthouse, optimisation des images (WebP via Cloudinary transforms), compression Gzip/Brotli |
+
+**Livrables :** Score Lighthouse > 90, temps de réponse API < 200ms sur les routes critiques
+
+---
+
+#### Sprint 10 — Lancement & Post-lancement
+**Objectif : mettre en production et stabiliser après le lancement**
+
+| Membre | Tâches |
+|---|---|
+| M1 | Page landing finale (hero, features, pricing, témoignages), page 404/500 personnalisées |
+| M2 | Monitoring : intégration Sentry (erreurs frontend + backend), alertes Uptime |
+| M3 | Déploiement production final, CDN pour les assets statiques, backup automatique PostgreSQL |
+
+**Livrables :** Application en production, monitoring en place
+
+---
+
 ## 9. Démarrage rapide
 
 ### Prérequis
