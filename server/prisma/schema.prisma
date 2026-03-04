@@ -1,0 +1,317 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Auth & Users ────────────────────────────────────────
+
+enum UserRole {
+  MEMBER
+  CREATOR
+  ADMIN
+}
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+  FACEBOOK
+}
+
+model User {
+  id           String       @id @default(uuid())
+  email        String       @unique
+  name         String
+  avatar       String?
+  bio          String?
+  role         UserRole     @default(MEMBER)
+  provider     AuthProvider @default(LOCAL)
+  providerId   String?
+  passwordHash String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  communities  CommunityMember[]
+  ownedCommunities Community[]
+  posts        Post[]
+  comments     Comment[]
+  likes        Like[]
+  enrollments  Enrollment[]
+  points       PointEntry[]
+  payments     Payment[]
+  courses      Course[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+// ─── Communities ─────────────────────────────────────────
+
+enum CommunityVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+model Community {
+  id          String              @id @default(uuid())
+  name        String
+  slug        String              @unique
+  description String?
+  coverImage  String?
+  visibility  CommunityVisibility @default(PUBLIC)
+  price       Decimal?            @db.Decimal(10, 3)
+  creatorId   String
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  creator     User                @relation(fields: [creatorId], references: [id])
+  members     CommunityMember[]
+  posts       Post[]
+  courses     Course[]
+  levels      Level[]
+  pointEntries PointEntry[]
+
+  @@map("communities")
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  MODERATOR
+  MEMBER
+}
+
+model CommunityMember {
+  id          String     @id @default(uuid())
+  userId      String
+  communityId String
+  role        MemberRole @default(MEMBER)
+  joinedAt    DateTime   @default(now())
+
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community   Community  @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, communityId])
+  @@map("community_members")
+}
+
+// ─── Posts & Comments ───────────────────────────────────
+
+enum PostType {
+  DISCUSSION
+  ANNOUNCEMENT
+  POLL
+}
+
+model Post {
+  id          String   @id @default(uuid())
+  communityId String
+  authorId    String
+  title       String
+  content     String
+  type        PostType @default(DISCUSSION)
+  pinned      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  author      User      @relation(fields: [authorId], references: [id])
+  comments    Comment[]
+  likes       Like[]
+
+  @@index([communityId, createdAt])
+  @@map("posts")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  postId    String
+  authorId  String
+  content   String
+  parentId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id])
+  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[] @relation("CommentReplies")
+
+  @@index([postId, createdAt])
+  @@map("comments")
+}
+
+model Like {
+  id     String @id @default(uuid())
+  postId String
+  userId String
+
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@map("likes")
+}
+
+// ─── Courses ────────────────────────────────────────────
+
+model Course {
+  id          String   @id @default(uuid())
+  communityId String
+  creatorId   String
+  title       String
+  description String?
+  coverImage  String?
+  price       Decimal? @db.Decimal(10, 3)
+  published   Boolean  @default(false)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  community   Community   @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  creator     User        @relation(fields: [creatorId], references: [id])
+  modules     Module[]
+  enrollments Enrollment[]
+
+  @@index([communityId])
+  @@map("courses")
+}
+
+model Module {
+  id       String   @id @default(uuid())
+  courseId  String
+  title    String
+  order    Int      @default(0)
+  createdAt DateTime @default(now())
+
+  course   Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons  Lesson[]
+
+  @@index([courseId])
+  @@map("modules")
+}
+
+enum LessonType {
+  VIDEO
+  TEXT
+  QUIZ
+}
+
+model Lesson {
+  id        String     @id @default(uuid())
+  moduleId  String
+  title     String
+  type      LessonType @default(TEXT)
+  content   String?
+  videoUrl  String?
+  duration  Int?
+  order     Int        @default(0)
+  createdAt DateTime   @default(now())
+
+  module    Module     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@index([moduleId])
+  @@map("lessons")
+}
+
+model Enrollment {
+  id               String   @id @default(uuid())
+  userId           String
+  courseId          String
+  completedLessons String[] @default([])
+  progress         Float    @default(0)
+  enrolledAt       DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}
+
+// ─── Gamification ───────────────────────────────────────
+
+model PointEntry {
+  id          String   @id @default(uuid())
+  userId      String
+  communityId String
+  amount      Int
+  reason      String
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@index([userId, communityId])
+  @@map("point_entries")
+}
+
+model Level {
+  id          String @id @default(uuid())
+  communityId String
+  name        String
+  minPoints   Int
+  badgeIcon   String?
+  order       Int    @default(0)
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@index([communityId])
+  @@map("levels")
+}
+
+// ─── Payments ───────────────────────────────────────────
+
+enum PaymentType {
+  COURSE
+  COMMUNITY
+}
+
+enum PaymentProvider {
+  FLOUCI
+  KONNECT
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model Payment {
+  id           String          @id @default(uuid())
+  userId       String
+  type         PaymentType
+  referenceId  String
+  amount       Decimal         @db.Decimal(10, 3)
+  currency     String          @default("TND")
+  provider     PaymentProvider
+  status       PaymentStatus   @default(PENDING)
+  providerTxId String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("payments")
+}
+
+// ─── Notifications ──────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  body      String
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@map("notifications")
+}
