@@ -9,21 +9,21 @@ function getInitialMode() {
 }
 
 export function ThemeProvider({ children }) {
-  const [mode, setMode] = useState('light');
+  const [mode, setMode] = useState(() => getInitialMode());
 
   useEffect(() => {
-    const initial = getInitialMode();
-    setMode(initial);
-    document.documentElement.classList.toggle('dark', initial === 'dark');
-  }, []);
+    document.documentElement.classList.toggle('dark', mode === 'dark');
+  }, [mode]);
 
   function toggleMode() {
     document.documentElement.classList.add('theme-transitioning');
     setTimeout(() => document.documentElement.classList.remove('theme-transitioning'), 0);
 
-    const isDark = document.documentElement.classList.toggle('dark');
-    localStorage.setItem('darkMode', isDark);
-    setMode(isDark ? 'dark' : 'light');
+    setMode((currentMode) => {
+      const nextMode = currentMode === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('darkMode', nextMode === 'dark');
+      return nextMode;
+    });
   }
 
   return (

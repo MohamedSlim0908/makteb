@@ -3,14 +3,12 @@ import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../lib/theme.jsx';
 import { Avatar } from '../ui/Avatar';
 import { Button } from '../ui/Button';
-import { useState } from 'react';
-import { HiMenu, HiX, HiBell, HiChat, HiSearch, HiChevronDown, HiMoon, HiSun } from 'react-icons/hi';
+import { HiX, HiBell, HiChat, HiSearch, HiChevronDown, HiMoon, HiSun } from 'react-icons/hi';
 
 export function Navbar() {
   const { user, logout } = useAuth();
   const { mode, toggleMode } = useTheme();
   const navigate = useNavigate();
-  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50 h-16 transition-colors duration-300">

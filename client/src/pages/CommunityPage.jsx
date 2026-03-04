@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   HiInformationCircle,
@@ -35,7 +35,6 @@ export function CommunityPage() {
   const [newPostContent, setNewPostContent] = useState('');
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
 
   const { data: community, isLoading: communityLoading } = useQuery({
     queryKey: ['community', slug],
@@ -71,15 +70,6 @@ export function CommunityPage() {
       return data.leaderboard;
     },
     enabled: !!community?.id && (activeTab === 'leaderboards' || activeTab === 'feed'),
-  });
-
-  const { data: members, isLoading: membersLoading } = useQuery({
-    queryKey: ['community-members', community?.id],
-    queryFn: async () => {
-      const { data } = await api.get(`/communities/${community.id}/members`);
-      return data;
-    },
-    enabled: !!community?.id && (activeTab === 'members' || activeTab === 'about'),
   });
 
   const joinMutation = useMutation({
@@ -520,9 +510,10 @@ export function CommunityPage() {
                       {community.isMember ? (
                         <Button 
                           className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm dark:shadow-gray-900/30"
-                          onClick={() => {}}
+                          onClick={() => leaveMutation.mutate()}
+                          isLoading={leaveMutation.isPending}
                         >
-                          INVITE PEOPLE
+                          LEAVE COMMUNITY
                         </Button>
                       ) : (
                         <Button 

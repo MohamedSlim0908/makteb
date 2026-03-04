@@ -69,7 +69,6 @@ export function CoursePage() {
   const completedCount = completedIds.size;
   const progressPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
 
-  const currentLesson = course?.modules.flatMap((m) => m.lessons).find((l) => l.id === currentLessonId);
   const firstLessonId = course?.modules[0]?.lessons[0]?.id;
 
   if (!user) {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -9,18 +9,16 @@ import toast from 'react-hot-toast';
 
 export function SettingsPage() {
   const { user } = useAuth();
+  if (!user) return null;
+
+  return <SettingsForm key={user.id ?? 'current-user'} user={user} />;
+}
+
+function SettingsForm({ user }) {
   const queryClient = useQueryClient();
   const [name, setName] = useState(user?.name ?? '');
   const [bio, setBio] = useState(user?.bio ?? '');
   const [avatar, setAvatar] = useState(user?.avatar ?? '');
-
-  useEffect(() => {
-    if (user) {
-      setName(user.name);
-      setBio(user.bio ?? '');
-      setAvatar(user.avatar ?? '');
-    }
-  }, [user]);
 
   const updateMutation = useMutation({
     mutationFn: (body) => api.put('/auth/me', body),
@@ -37,8 +35,6 @@ export function SettingsPage() {
     e.preventDefault();
     updateMutation.mutate({ name, bio: bio || undefined, avatar: avatar || undefined });
   }
-
-  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">

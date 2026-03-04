@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { api } from '../lib/api';
 
@@ -20,17 +20,7 @@ export function setAccessToken(token) {
 export function useAuth() {
   const { user, isLoading, setUser, setLoading, logout } = useAuthStore();
 
-  useEffect(() => {
-    const stored = localStorage.getItem('accessToken');
-    if (stored) {
-      setAccessToken(stored);
-      fetchUser();
-    } else {
-      setLoading(false);
-    }
-  }, []);
-
-  async function fetchUser() {
+  const fetchUser = useCallback(async () => {
     try {
       const { data } = await api.get('/auth/me');
       setUser(data.user);
@@ -38,8 +28,20 @@ export function useAuth() {
       setAccessToken(null);
       localStorage.removeItem('accessToken');
       setUser(null);
+    } finally {
+      setLoading(false);
     }
-  }
+  }, [setUser, setLoading]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('accessToken');
+    if (stored) {
+      setAccessToken(stored);
+      void fetchUser();
+    } else {
+      setLoading(false);
+    }
+  }, [fetchUser, setLoading]);
 
   async function login(email, password) {
     const { data } = await api.post('/auth/login', { email, password });
@@ -58,7 +60,11 @@ export function useAuth() {
   }
 
   async function handleLogout() {
-    try { await api.post('/auth/logout'); } catch {}
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      // Ignore logout network failures and clear local auth state anyway.
+    }
     setAccessToken(null);
     localStorage.removeItem('accessToken');
     logout();
