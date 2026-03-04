@@ -21,7 +21,7 @@ export function CoursePage() {
     queryKey: ['course', id],
     queryFn: async () => {
       const { data } = await api.get(`/courses/${id}`);
-      return data;
+      return data.course;
     },
     enabled: !!id,
   });
@@ -31,7 +31,7 @@ export function CoursePage() {
     queryFn: async () => {
       try {
         const { data } = await api.get(`/courses/${id}/progress`);
-        return data;
+        return data.enrollment;
       } catch (err) {
         if (axios.isAxiosError(err) && err.response?.status === 404) return null;
         throw err;
@@ -64,7 +64,7 @@ export function CoursePage() {
   });
 
   const isEnrolled = !!progress;
-  const completedIds = new Set(progress?.completedLessonIds ?? []);
+  const completedIds = new Set(progress?.completedLessons ?? []);
   const totalLessons = course?.modules.reduce((acc, m) => acc + m.lessons.length, 0) ?? 0;
   const completedCount = completedIds.size;
   const progressPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;

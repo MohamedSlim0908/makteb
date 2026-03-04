@@ -20,25 +20,17 @@ export function PostPage() {
     queryKey: ['post', id],
     queryFn: async () => {
       const { data } = await api.get(`/posts/${id}`);
-      return data;
+      return data.post;
     },
     enabled: !!id,
   });
 
-  const likeMutation = useMutation({
+  const toggleLikeMutation = useMutation({
     mutationFn: () => api.post(`/posts/${id}/like`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['post', id] });
     },
-    onError: () => toast.error('Failed to like'),
-  });
-
-  const unlikeMutation = useMutation({
-    mutationFn: () => api.delete(`/posts/${id}/like`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['post', id] });
-    },
-    onError: () => toast.error('Failed to unlike'),
+    onError: () => toast.error('Failed to like post'),
   });
 
   const addCommentMutation = useMutation({
@@ -80,11 +72,7 @@ export function PostPage() {
       toast.error('Sign in to like');
       return;
     }
-    if (post?.isLiked) {
-      unlikeMutation.mutate();
-    } else {
-      likeMutation.mutate();
-    }
+    toggleLikeMutation.mutate();
   }
 
   if (isLoading || !post) {

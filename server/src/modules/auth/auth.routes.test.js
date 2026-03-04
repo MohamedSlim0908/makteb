@@ -1,13 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../lib/prisma.js', () => ({
-  prisma: {
-    user: {
-      findUnique: vi.fn(),
-      create: vi.fn(),
-      update: vi.fn(),
-    },
-  },
+vi.mock('./auth.service.js', () => ({
+  registerUser: vi.fn(),
+  resolveRefreshToken: vi.fn(),
+  getCurrentUser: vi.fn(),
+  updateUserProfile: vi.fn(),
 }));
 
 vi.mock('../../middleware/auth.js', () => ({
@@ -18,7 +15,6 @@ vi.mock('../../middleware/auth.js', () => ({
   requireRole: () => (_req, _res, next) => next(),
 }));
 
-// Mock passport — authenticate returns a no-op middleware for OAuth routes
 vi.mock('passport', () => {
   const mockMiddleware = (_req, _res, next) => next && next();
   const authenticate = vi.fn(() => mockMiddleware);
@@ -30,19 +26,21 @@ vi.mock('passport', () => {
   };
 });
 
-import { prisma } from '../../lib/prisma.js';
+import * as authService from './auth.service.js';
 import passport from 'passport';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import router from './auth.routes.js';
 import { generateRefreshToken } from './auth.utils.js';
+import { errorHandler } from '../../middleware/error-handler.js';
 
 function buildApp() {
   const app = express();
   app.use(express.json());
   app.use(cookieParser());
   app.use('/', router);
+  app.use(errorHandler);
   return app;
 }
 
@@ -58,11 +56,9 @@ const MOCK_USER = {
 
 beforeEach(() => vi.clearAllMocks());
 
-// ── POST /register ────────────────────────────────────────
 describe('POST /register', () => {
   it('creates a new user and returns 201 with accessToken', async () => {
-    prisma.user.findUnique.mockResolvedValue(null); // no existing user
-    prisma.user.create.mockResolvedValue(MOCK_USER);
+    authService.registerUser.mockResolvedValue(MOCK_USER);
 
     const res = await request(buildApp())
       .post('/register')
@@ -76,14 +72,15 @@ describe('POST /register', () => {
   it('returns 400 when required fields are missing', async () => {
     const res = await request(buildApp())
       .post('/register')
-      .send({ email: 'ali@makteb.tn' }); // missing name and password
+      .send({ email: 'ali@makteb.tn' });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toBeDefined();
   });
 
   it('returns 409 when email is already registered', async () => {
-    prisma.user.findUnique.mockResolvedValue(MOCK_USER); // user already exists
+    const { AppError } = await import('../../middleware/error-handler.js');
+    authService.registerUser.mockRejectedValue(new AppError('Email already registered', 409));
 
     const res = await request(buildApp())
       .post('/register')
@@ -94,8 +91,7 @@ describe('POST /register', () => {
   });
 
   it('sets a refreshToken cookie on success', async () => {
-    prisma.user.findUnique.mockResolvedValue(null);
-    prisma.user.create.mockResolvedValue(MOCK_USER);
+    authService.registerUser.mockResolvedValue(MOCK_USER);
 
     const res = await request(buildApp())
       .post('/register')
@@ -106,7 +102,6 @@ describe('POST /register', () => {
   });
 });
 
-// ── POST /login ───────────────────────────────────────────
 describe('POST /login', () => {
   it('returns user and accessToken on valid credentials', async () => {
     passport.authenticate.mockImplementation((_strategy, _opts, cb) =>
@@ -136,10 +131,9 @@ describe('POST /login', () => {
   });
 });
 
-// ── POST /refresh ──────────────────────────────────────────
 describe('POST /refresh', () => {
   it('returns new accessToken for a valid refresh cookie', async () => {
-    prisma.user.findUnique.mockResolvedValue(MOCK_USER);
+    authService.resolveRefreshToken.mockResolvedValue(MOCK_USER);
     const refreshToken = generateRefreshToken({ userId: 'user-1', role: 'MEMBER' });
 
     const res = await request(buildApp())
@@ -158,6 +152,9 @@ describe('POST /refresh', () => {
   });
 
   it('returns 401 for a tampered refresh token', async () => {
+    const { AppError } = await import('../../middleware/error-handler.js');
+    authService.resolveRefreshToken.mockRejectedValue(new AppError('Invalid refresh token', 401));
+
     const res = await request(buildApp())
       .post('/refresh')
       .set('Cookie', 'refreshToken=bad.token.here');
@@ -166,7 +163,9 @@ describe('POST /refresh', () => {
   });
 
   it('returns 401 when user no longer exists', async () => {
-    prisma.user.findUnique.mockResolvedValue(null);
+    const { AppError } = await import('../../middleware/error-handler.js');
+    authService.resolveRefreshToken.mockRejectedValue(new AppError('User not found', 401));
+
     const token = generateRefreshToken({ userId: 'deleted-user', role: 'MEMBER' });
 
     const res = await request(buildApp())
@@ -178,10 +177,9 @@ describe('POST /refresh', () => {
   });
 });
 
-// ── GET /me ───────────────────────────────────────────────
 describe('GET /me', () => {
   it('returns the current user profile', async () => {
-    prisma.user.findUnique.mockResolvedValue(MOCK_USER);
+    authService.getCurrentUser.mockResolvedValue(MOCK_USER);
 
     const res = await request(buildApp()).get('/me');
 
@@ -191,7 +189,8 @@ describe('GET /me', () => {
   });
 
   it('returns 404 when user not found in DB', async () => {
-    prisma.user.findUnique.mockResolvedValue(null);
+    const { AppError } = await import('../../middleware/error-handler.js');
+    authService.getCurrentUser.mockRejectedValue(new AppError('User not found', 404));
 
     const res = await request(buildApp()).get('/me');
 
@@ -199,11 +198,10 @@ describe('GET /me', () => {
   });
 });
 
-// ── PUT /me ───────────────────────────────────────────────
 describe('PUT /me', () => {
   it('updates and returns user profile', async () => {
     const updated = { ...MOCK_USER, name: 'Ali Updated', bio: 'Coach' };
-    prisma.user.update.mockResolvedValue(updated);
+    authService.updateUserProfile.mockResolvedValue(updated);
 
     const res = await request(buildApp())
       .put('/me')
@@ -215,14 +213,12 @@ describe('PUT /me', () => {
   });
 });
 
-// ── POST /logout ──────────────────────────────────────────
 describe('POST /logout', () => {
   it('clears the refreshToken cookie and returns success', async () => {
     const res = await request(buildApp()).post('/logout');
 
     expect(res.status).toBe(200);
     expect(res.body.message).toBeDefined();
-    // Cookie cleared
     const setCookie = res.headers['set-cookie']?.[0] || '';
     expect(setCookie).toMatch(/refreshToken=;/);
   });

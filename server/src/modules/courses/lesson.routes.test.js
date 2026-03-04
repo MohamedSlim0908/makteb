@@ -29,12 +29,14 @@ import { prisma } from '../../lib/prisma.js';
 import express from 'express';
 import request from 'supertest';
 import router from './lesson.routes.js';
+import { errorHandler } from '../../middleware/error-handler.js';
 
 function buildApp(userId = 'user-1') {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => { req.userId = userId; next(); });
   app.use('/', router);
+  app.use(errorHandler);
   return app;
 }
 

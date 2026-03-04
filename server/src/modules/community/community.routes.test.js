@@ -1,57 +1,40 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// ── Mocks ────────────────────────────────────────────────────
+vi.mock('./community.service.js', () => ({
+  listCommunities: vi.fn(),
+  getCommunityBySlug: vi.fn(),
+  createCommunity: vi.fn(),
+  updateCommunity: vi.fn(),
+  deleteCommunity: vi.fn(),
+  joinCommunity: vi.fn(),
+  leaveCommunity: vi.fn(),
+  getCommunityMembers: vi.fn(),
+  getMembershipStatus: vi.fn(),
+  removeMember: vi.fn(),
+  updateMemberRole: vi.fn(),
+}));
 
-// Bypass requireAuth — inject userId via app middleware instead
 vi.mock('../../middleware/auth.js', () => ({
   requireAuth: (req, _res, next) => next(),
   requireRole: () => (_req, _res, next) => next(),
 }));
 
-vi.mock('../../lib/prisma.js', () => ({
-  prisma: {
-    community: {
-      findMany: vi.fn(),
-      count: vi.fn(),
-      findUnique: vi.fn(),
-      create: vi.fn(),
-      update: vi.fn(),
-      delete: vi.fn(),
-    },
-    communityMember: {
-      findUnique: vi.fn(),
-      create: vi.fn(),
-      delete: vi.fn(),
-      findMany: vi.fn(),
-      update: vi.fn(),
-    },
-    payment: {
-      findFirst: vi.fn(),
-    },
-    user: {
-      update: vi.fn(),
-    },
-  },
-}));
-
-vi.mock('slug', () => ({ default: (s) => s.toLowerCase().replace(/\s+/g, '-') }));
-
-import { prisma } from '../../lib/prisma.js';
+import * as communityService from './community.service.js';
 import express from 'express';
 import request from 'supertest';
 import router from './community.routes.js';
+import { errorHandler } from '../../middleware/error-handler.js';
 
-// Build a mini Express app for testing
 function buildApp(userId = 'user-test-id', userRole = 'MEMBER') {
   const app = express();
   app.use(express.json());
-  // Inject auth mock
   app.use((req, _res, next) => {
     req.userId = userId;
     req.userRole = userRole;
     next();
   });
   app.use('/', router);
+  app.use(errorHandler);
   return app;
 }
 
@@ -71,8 +54,12 @@ const COMMUNITY = {
 
 describe('GET /', () => {
   it('returns a list of communities', async () => {
-    prisma.community.findMany.mockResolvedValue([COMMUNITY]);
-    prisma.community.count.mockResolvedValue(1);
+    communityService.listCommunities.mockResolvedValue({
+      communities: [COMMUNITY],
+      total: 1,
+      page: 1,
+      totalPages: 1,
+    });
 
     const res = await request(buildApp()).get('/');
 
@@ -83,25 +70,21 @@ describe('GET /', () => {
   });
 
   it('supports search query', async () => {
-    prisma.community.findMany.mockResolvedValue([]);
-    prisma.community.count.mockResolvedValue(0);
+    communityService.listCommunities.mockResolvedValue({ communities: [], total: 0, page: 1, totalPages: 0 });
 
     await request(buildApp()).get('/?search=coding');
 
-    expect(prisma.community.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ OR: expect.any(Array) }),
-      })
+    expect(communityService.listCommunities).toHaveBeenCalledWith(
+      expect.objectContaining({ search: 'coding' })
     );
   });
 
   it('defaults to page 1, limit 12', async () => {
-    prisma.community.findMany.mockResolvedValue([]);
-    prisma.community.count.mockResolvedValue(0);
+    communityService.listCommunities.mockResolvedValue({ communities: [], total: 0, page: 1, totalPages: 0 });
 
     await request(buildApp()).get('/');
 
-    expect(prisma.community.findMany).toHaveBeenCalledWith(
+    expect(communityService.listCommunities).toHaveBeenCalledWith(
       expect.objectContaining({ skip: 0, take: 12 })
     );
   });
@@ -109,7 +92,7 @@ describe('GET /', () => {
 
 describe('GET /:slug', () => {
   it('returns the community for a valid slug', async () => {
-    prisma.community.findUnique.mockResolvedValue(COMMUNITY);
+    communityService.getCommunityBySlug.mockResolvedValue(COMMUNITY);
 
     const res = await request(buildApp()).get('/makteb-academy');
 
@@ -118,7 +101,8 @@ describe('GET /:slug', () => {
   });
 
   it('returns 404 when community not found', async () => {
-    prisma.community.findUnique.mockResolvedValue(null);
+    const { AppError } = await import('../../middleware/error-handler.js');
+    communityService.getCommunityBySlug.mockRejectedValue(new AppError('Community not found', 404));
 
     const res = await request(buildApp()).get('/not-exists');
 
@@ -129,9 +113,7 @@ describe('GET /:slug', () => {
 
 describe('POST /', () => {
   it('creates a community and returns 201', async () => {
-    prisma.community.findUnique.mockResolvedValue(null); // no slug collision
-    prisma.community.create.mockResolvedValue(COMMUNITY);
-    prisma.user.update.mockResolvedValue({});
+    communityService.createCommunity.mockResolvedValue(COMMUNITY);
 
     const res = await request(buildApp())
       .post('/')
@@ -151,7 +133,7 @@ describe('POST /', () => {
 
 describe('DELETE /:id/leave', () => {
   it('removes member from community', async () => {
-    prisma.communityMember.delete.mockResolvedValue({});
+    communityService.leaveCommunity.mockResolvedValue(undefined);
 
     const res = await request(buildApp()).delete('/com-1/leave');
 

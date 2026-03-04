@@ -35,3 +35,21 @@ export function setRefreshCookie(res, token) {
     path: '/',
   });
 }
+
+export function formatUserResponse(user) {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    avatar: user.avatar,
+    bio: user.bio,
+  };
+}
+
+export function issueTokenPair(res, user) {
+  const accessToken = generateAccessToken({ userId: user.id, role: user.role });
+  const refreshToken = generateRefreshToken({ userId: user.id, role: user.role });
+  setRefreshCookie(res, refreshToken);
+  return accessToken;
+}

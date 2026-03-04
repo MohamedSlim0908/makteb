@@ -17,7 +17,8 @@ import {
   HiPaperClip,
   HiEmojiHappy,
   HiVideoCamera,
-  HiLockClosed
+  HiLockClosed,
+  HiSearch,
 } from 'react-icons/hi';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -40,7 +41,7 @@ export function CommunityPage() {
     queryKey: ['community', slug],
     queryFn: async () => {
       const { data } = await api.get(`/communities/${slug}`);
-      return data;
+      return data.community;
     },
     enabled: !!slug,
   });
@@ -49,7 +50,7 @@ export function CommunityPage() {
     queryKey: ['posts', 'community', community?.id],
     queryFn: async () => {
       const { data } = await api.get(`/posts/community/${community.id}`);
-      return data;
+      return data.posts;
     },
     enabled: !!community?.id && activeTab === 'feed',
   });
@@ -58,7 +59,7 @@ export function CommunityPage() {
     queryKey: ['courses', 'community', community?.id],
     queryFn: async () => {
       const { data } = await api.get(`/courses/community/${community.id}`);
-      return data;
+      return data.courses;
     },
     enabled: !!community?.id && activeTab === 'classroom',
   });
@@ -67,7 +68,7 @@ export function CommunityPage() {
     queryKey: ['leaderboard', community?.id],
     queryFn: async () => {
       const { data } = await api.get(`/gamification/leaderboard/${community.id}`);
-      return data;
+      return data.leaderboard;
     },
     enabled: !!community?.id && (activeTab === 'leaderboards' || activeTab === 'feed'),
   });

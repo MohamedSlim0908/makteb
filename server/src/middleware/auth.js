@@ -18,6 +18,21 @@ export function requireAuth(req, res, next) {
   }
 }
 
+export function optionalAuth(req, _res, next) {
+  const header = req.headers.authorization;
+  if (header?.startsWith('Bearer ')) {
+    try {
+      const token = header.split(' ')[1];
+      const payload = verifyAccessToken(token);
+      req.userId = payload.userId;
+      req.userRole = payload.role;
+    } catch {
+      // silently ignore invalid tokens
+    }
+  }
+  next();
+}
+
 export function requireRole(...roles) {
   return (req, res, next) => {
     if (!req.userRole || !roles.includes(req.userRole)) {

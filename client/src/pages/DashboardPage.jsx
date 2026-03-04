@@ -45,7 +45,7 @@ export function DashboardPage() {
   });
 
   const myCommunities =
-    communitiesData?.data?.filter(
+    communitiesData?.communities?.filter(
       (c) => (c.creatorId ?? c.creator?.id) === user?.id
     ) ?? [];
   const hasCommunities = myCommunities.length > 0;
@@ -54,13 +54,13 @@ export function DashboardPage() {
   const { data: coursesData } = useQuery({
     queryKey: ['courses', activeCommunityId],
     queryFn: async () => {
-      const { data } = await api.get(`/communities/${activeCommunityId}/courses`);
+      const { data } = await api.get(`/courses/community/${activeCommunityId}`);
       return data;
     },
     enabled: !!activeCommunityId,
   });
 
-  const courses = coursesData?.data ?? [];
+  const courses = coursesData?.courses ?? [];
 
   const { data: earnings } = useQuery({
     queryKey: ['earnings', activeCommunityId],

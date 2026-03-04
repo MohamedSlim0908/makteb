@@ -1,53 +1,36 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+vi.mock('./course.service.js', () => ({
+  listCommunityCourses: vi.fn(),
+  getCourse: vi.fn(),
+  createCourse: vi.fn(),
+  updateCourse: vi.fn(),
+  deleteCourse: vi.fn(),
+  createModule: vi.fn(),
+  updateModule: vi.fn(),
+  deleteModule: vi.fn(),
+  enrollInCourse: vi.fn(),
+  getCourseProgress: vi.fn(),
+  reorderModules: vi.fn(),
+}));
+
 vi.mock('../../middleware/auth.js', () => ({
   requireAuth: (req, _res, next) => next(),
   requireRole: () => (_req, _res, next) => next(),
 }));
 
-vi.mock('../../lib/prisma.js', () => ({
-  prisma: {
-    course: {
-      findMany: vi.fn(),
-      findUnique: vi.fn(),
-      create: vi.fn(),
-      update: vi.fn(),
-      delete: vi.fn(),
-    },
-    community: {
-      findUnique: vi.fn(),
-    },
-    enrollment: {
-      findUnique: vi.fn(),
-      create: vi.fn(),
-    },
-    payment: {
-      findFirst: vi.fn(),
-    },
-    module: {
-      create: vi.fn(),
-      update: vi.fn(),
-      delete: vi.fn(),
-      findMany: vi.fn(),
-    },
-    $transaction: vi.fn((ops) => Promise.all(ops)),
-  },
-}));
-
-vi.mock('../gamification/gamification.service.js', () => ({
-  awardPoints: vi.fn().mockResolvedValue({}),
-}));
-
-import { prisma } from '../../lib/prisma.js';
+import * as courseService from './course.service.js';
 import express from 'express';
 import request from 'supertest';
 import router from './course.routes.js';
+import { errorHandler } from '../../middleware/error-handler.js';
 
 function buildApp(userId = 'creator-1') {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => { req.userId = userId; next(); });
   app.use('/', router);
+  app.use(errorHandler);
   return app;
 }
 
@@ -68,7 +51,7 @@ const COURSE = {
 
 describe('GET /community/:communityId', () => {
   it('returns list of published courses', async () => {
-    prisma.course.findMany.mockResolvedValue([COURSE]);
+    courseService.listCommunityCourses.mockResolvedValue([COURSE]);
 
     const res = await request(buildApp()).get('/community/com-1');
 
@@ -78,21 +61,17 @@ describe('GET /community/:communityId', () => {
   });
 
   it('only returns published courses', async () => {
-    prisma.course.findMany.mockResolvedValue([]);
+    courseService.listCommunityCourses.mockResolvedValue([]);
 
     await request(buildApp()).get('/community/com-1');
 
-    expect(prisma.course.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ published: true }),
-      })
-    );
+    expect(courseService.listCommunityCourses).toHaveBeenCalledWith('com-1');
   });
 });
 
 describe('GET /:id', () => {
   it('returns course with modules and lessons', async () => {
-    prisma.course.findUnique.mockResolvedValue({ ...COURSE, modules: [] });
+    courseService.getCourse.mockResolvedValue({ ...COURSE, modules: [] });
 
     const res = await request(buildApp()).get('/course-1');
 
@@ -101,7 +80,8 @@ describe('GET /:id', () => {
   });
 
   it('returns 404 for unknown course', async () => {
-    prisma.course.findUnique.mockResolvedValue(null);
+    const { AppError } = await import('../../middleware/error-handler.js');
+    courseService.getCourse.mockRejectedValue(new AppError('Course not found', 404));
 
     const res = await request(buildApp()).get('/unknown');
 
@@ -111,8 +91,7 @@ describe('GET /:id', () => {
 
 describe('POST /', () => {
   it('creates a course when requester is community creator', async () => {
-    prisma.community.findUnique.mockResolvedValue({ id: 'com-1', creatorId: 'creator-1' });
-    prisma.course.create.mockResolvedValue(COURSE);
+    courseService.createCourse.mockResolvedValue(COURSE);
 
     const res = await request(buildApp('creator-1'))
       .post('/')
@@ -123,7 +102,10 @@ describe('POST /', () => {
   });
 
   it('returns 403 when requester is not community creator', async () => {
-    prisma.community.findUnique.mockResolvedValue({ id: 'com-1', creatorId: 'someone-else' });
+    const { AppError } = await import('../../middleware/error-handler.js');
+    courseService.createCourse.mockRejectedValue(
+      new AppError('Only community creator can add courses', 403)
+    );
 
     const res = await request(buildApp('random-user'))
       .post('/')
@@ -140,14 +122,7 @@ describe('POST /', () => {
 
 describe('POST /:id/enroll', () => {
   it('enrolls user in a free course', async () => {
-    prisma.course.findUnique.mockResolvedValue({
-      ...COURSE,
-      price: null,
-      communityId: 'com-1',
-      modules: [{ lessons: [] }],
-    });
-    prisma.enrollment.findUnique.mockResolvedValue(null); // not enrolled yet
-    prisma.enrollment.create.mockResolvedValue({ id: 'enr-1', userId: 'u1', courseId: 'course-1' });
+    courseService.enrollInCourse.mockResolvedValue({ id: 'enr-1', userId: 'u1', courseId: 'course-1' });
 
     const res = await request(buildApp('u1')).post('/course-1/enroll');
 
@@ -156,8 +131,8 @@ describe('POST /:id/enroll', () => {
   });
 
   it('returns 409 when already enrolled', async () => {
-    prisma.course.findUnique.mockResolvedValue({ ...COURSE, price: null, modules: [] });
-    prisma.enrollment.findUnique.mockResolvedValue({ id: 'enr-1' }); // already enrolled
+    const { AppError } = await import('../../middleware/error-handler.js');
+    courseService.enrollInCourse.mockRejectedValue(new AppError('Already enrolled', 409));
 
     const res = await request(buildApp('u1')).post('/course-1/enroll');
 
@@ -165,13 +140,8 @@ describe('POST /:id/enroll', () => {
   });
 
   it('returns 402 for a paid course without payment', async () => {
-    prisma.course.findUnique.mockResolvedValue({
-      ...COURSE,
-      price: 99,
-      modules: [],
-    });
-    prisma.enrollment.findUnique.mockResolvedValue(null);
-    prisma.payment.findFirst.mockResolvedValue(null); // no payment
+    const { AppError } = await import('../../middleware/error-handler.js');
+    courseService.enrollInCourse.mockRejectedValue(new AppError('Payment required', 402));
 
     const res = await request(buildApp('u1')).post('/course-1/enroll');
 
