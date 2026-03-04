@@ -733,7 +733,29 @@ Jour 1+   →  M1 : Commence ProtectedRoute + refacto des pages
 
 ---
 
-#### Sprint 10 — Lancement & Post-lancement
+#### Sprint 10 — Sécurité
+**Objectif : auditer et renforcer la sécurité de l'application de bout en bout**
+
+| Membre | Tâches |
+|---|---|
+| M1 | Sanitisation des inputs dans les formulaires (DOMPurify sur le contenu Tiptap), protection CSRF sur les formulaires sensibles, vérification que les données utilisateur ne sont jamais rendues en `dangerouslySetInnerHTML` sans nettoyage |
+| M2 | Rate limiting sur toutes les routes sensibles (`/auth/login`, `/auth/register`, `/payments/initiate`), rotation des secrets JWT via env, validation stricte des `referenceId` dans les paiements, audit des permissions (vérifier que chaque route protégée ne peut pas être contournée), logs de sécurité (tentatives de connexion échouées) |
+| M3 | Audit des headers HTTP (Helmet config complète : CSP, HSTS, X-Frame-Options), scan des dépendances vulnérables (`npm audit`), revue des variables d'env en production (secrets non exposés), test de pénétration basique (OWASP Top 10) |
+
+**Checklist sécurité à valider en fin de sprint :**
+- [ ] Aucun secret dans le code source (`git log` + `git grep`)
+- [ ] Tous les tokens expirés sont bien rejetés (tests automatisés)
+- [ ] Les routes d'admin/créateur sont inaccessibles sans le bon rôle
+- [ ] Les paiements ne peuvent pas être vérifiés par un autre utilisateur
+- [ ] Les uploads acceptent uniquement les types MIME autorisés (images)
+- [ ] Les cookies `httpOnly` + `Secure` + `SameSite=Strict` en production
+- [ ] `npm audit` renvoie 0 vulnérabilités critiques/high
+
+**Livrables :** Rapport de sécurité, 0 vulnérabilité critique, checklist complétée
+
+---
+
+#### Sprint 11 — Lancement & Post-lancement
 **Objectif : mettre en production et stabiliser après le lancement**
 
 | Membre | Tâches |
