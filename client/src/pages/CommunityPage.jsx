@@ -1,40 +1,97 @@
-import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import {
-  HiInformationCircle,
-  HiUserGroup,
-  HiBookOpen,
-  HiPlus,
-  HiHeart,
-  HiChat,
-  HiX,
-  HiCalendar,
-  HiMap,
-  HiChartBar,
-  HiHome,
-  HiDotsHorizontal,
-  HiPaperClip,
-  HiEmojiHappy,
-  HiVideoCamera,
-  HiLockClosed,
-  HiSearch,
-} from 'react-icons/hi';
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { Avatar } from '../components/ui/Avatar';
-import { api } from '../lib/api';
-import { useAuth } from '../hooks/useAuth';
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
+import {
+  BarChart3,
+  CalendarDays,
+  ChevronDown,
+  Heart,
+  Link2,
+  Map,
+  MessageCircle,
+  Paperclip,
+  Pin,
+  Smile,
+  Search,
+  Users,
+  Video,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
+import { Avatar } from '../components/ui/Avatar';
+import { Button } from '../components/ui/Button';
+import { useAuth } from '../hooks/useAuth';
+import { api } from '../lib/api';
+
+const PAGE_SIZE = 10;
+const CATEGORY_OPTIONS = [
+  { value: 'ALL', label: 'All' },
+  { value: 'WINS', label: 'Wins' },
+  { value: 'BRANDING_CLIENTS', label: 'Branding / Clients' },
+  { value: 'WORKFLOW_PRODUCTIVITY', label: 'Workflow / Productivity' },
+  { value: 'BANTER', label: 'Banter' },
+  { value: 'INTRODUCE_YOURSELF', label: 'Introduce Yourself' },
+  { value: 'GENERAL', label: 'General' },
+];
+
+const CATEGORY_LABELS = {
+  GENERAL: 'General',
+  WINS: 'Wins',
+  BRANDING_CLIENTS: 'Branding / Clients',
+  WORKFLOW_PRODUCTIVITY: 'Workflow / Productivity',
+  BANTER: 'Banter',
+  INTRODUCE_YOURSELF: 'Introduce Yourself',
+};
+
+const TABS = [
+  { id: 'community', label: 'Community' },
+  { id: 'classroom', label: 'Classroom' },
+  { id: 'calendar', label: 'Calendar' },
+  { id: 'members', label: 'Members' },
+  { id: 'map', label: 'Map' },
+  { id: 'leaderboards', label: 'Leaderboards' },
+  { id: 'about', label: 'About' },
+];
+
+function formatDate(value) {
+  return new Date(value).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function formatCategory(value) {
+  return CATEGORY_LABELS[value] || 'General';
+}
+
+function hoursUntil(nextDate) {
+  const diff = new Date(nextDate).getTime() - Date.now();
+  return Math.max(1, Math.round(diff / 3_600_000));
+}
+
+function buildSupportEmail(slug) {
+  if (!slug) return 'support@makteb.com';
+  return `${slug.replace(/[^a-z0-9-]/gi, '').toLowerCase()}@gmail.com`;
+}
 
 export function CommunityPage() {
   const { slug } = useParams();
-  const [activeTab, setActiveTab] = useState('feed');
-  const [showNewPostModal, setShowNewPostModal] = useState(false);
-  const [newPostTitle, setNewPostTitle] = useState('');
-  const [newPostContent, setNewPostContent] = useState('');
-  const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  const [activeTab, setActiveTab] = useState('community');
+  const [activeCategory, setActiveCategory] = useState('ALL');
+  const searchText = '';
+  const [showComposer, setShowComposer] = useState(false);
+  const [postTitle, setPostTitle] = useState('');
+  const [postContent, setPostContent] = useState('');
+  const [postCategory, setPostCategory] = useState('GENERAL');
+  const loadMoreRef = useRef(null);
 
   const { data: community, isLoading: communityLoading } = useQuery({
     queryKey: ['community', slug],
@@ -42,602 +99,783 @@ export function CommunityPage() {
       const { data } = await api.get(`/communities/${slug}`);
       return data.community;
     },
-    enabled: !!slug,
+    enabled: Boolean(slug),
   });
 
-  const { data: posts, isLoading: postsLoading } = useQuery({
-    queryKey: ['posts', 'community', community?.id],
+  const communityId = community?.id;
+
+  const { data: membership } = useQuery({
+    queryKey: ['community-membership', communityId, user?.id],
     queryFn: async () => {
-      const { data } = await api.get(`/posts/community/${community.id}`);
-      return data.posts;
+      const { data } = await api.get(`/communities/${communityId}/membership`);
+      return data.membership;
     },
-    enabled: !!community?.id && activeTab === 'feed',
+    enabled: Boolean(communityId && user?.id),
+    retry: false,
   });
 
-  const { data: courses, isLoading: coursesLoading } = useQuery({
-    queryKey: ['courses', 'community', community?.id],
+  const { data: members = [] } = useQuery({
+    queryKey: ['community-members', communityId],
     queryFn: async () => {
-      const { data } = await api.get(`/courses/community/${community.id}`);
+      const { data } = await api.get(`/communities/${communityId}/members`);
+      return data.members;
+    },
+    enabled: Boolean(communityId),
+  });
+
+  const { data: courses = [], isLoading: coursesLoading } = useQuery({
+    queryKey: ['community-courses', communityId],
+    queryFn: async () => {
+      const { data } = await api.get(`/courses/community/${communityId}`);
       return data.courses;
     },
-    enabled: !!community?.id && activeTab === 'classroom',
+    enabled: Boolean(communityId) && activeTab === 'classroom',
   });
 
-  const { data: leaderboard, isLoading: leaderboardLoading } = useQuery({
-    queryKey: ['leaderboard', community?.id],
+  const { data: leaderboard = [], isLoading: leaderboardLoading } = useQuery({
+    queryKey: ['community-leaderboard', communityId],
     queryFn: async () => {
-      const { data } = await api.get(`/gamification/leaderboard/${community.id}`);
+      const { data } = await api.get(`/gamification/leaderboard/${communityId}`);
       return data.leaderboard;
     },
-    enabled: !!community?.id && (activeTab === 'leaderboards' || activeTab === 'feed'),
+    enabled: Boolean(communityId),
   });
 
-  const joinMutation = useMutation({
-    mutationFn: () => api.post(`/communities/${community.id}/join`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['community', slug] });
-      toast.success('Joined community!');
+  const {
+    data: postsPages,
+    isLoading: postsLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['community-posts', communityId, activeCategory],
+    queryFn: async ({ pageParam }) => {
+      const params = new URLSearchParams({
+        page: String(pageParam),
+        limit: String(PAGE_SIZE),
+      });
+      if (activeCategory !== 'ALL') params.set('category', activeCategory);
+      const { data } = await api.get(`/posts/community/${communityId}?${params}`);
+      return data;
     },
-    onError: () => toast.error('Failed to join'),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      if (!lastPage?.totalPages || !lastPage?.page) return undefined;
+      return lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined;
+    },
+    enabled: Boolean(communityId) && activeTab === 'community',
+  });
+
+  useEffect(() => {
+    if (activeTab !== 'community') return;
+    if (!hasNextPage || isFetchingNextPage) return;
+    const target = loadMoreRef.current;
+    if (!target) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          fetchNextPage();
+        }
+      },
+      { rootMargin: '320px' }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [activeTab, fetchNextPage, hasNextPage, isFetchingNextPage]);
+
+  const joinMutation = useMutation({
+    mutationFn: () => api.post(`/communities/${communityId}/join`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['community-membership', communityId, user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['community-members', communityId] });
+      queryClient.invalidateQueries({ queryKey: ['community', slug] });
+      toast.success('Joined community');
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Failed to join community');
+    },
   });
 
   const leaveMutation = useMutation({
-    mutationFn: () => api.delete(`/communities/${community.id}/leave`),
+    mutationFn: () => api.delete(`/communities/${communityId}/leave`),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['community-membership', communityId, user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['community-members', communityId] });
       queryClient.invalidateQueries({ queryKey: ['community', slug] });
       toast.success('Left community');
     },
-    onError: () => toast.error('Failed to leave'),
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Failed to leave community');
+    },
   });
 
   const createPostMutation = useMutation({
-    mutationFn: (payload) =>
-      api.post(`/posts`, { ...payload, communityId: community.id }),
+    mutationFn: (payload) => api.post('/posts', payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts', 'community', community?.id] });
-      setShowNewPostModal(false);
-      setNewPostTitle('');
-      setNewPostContent('');
-      toast.success('Post created!');
+      queryClient.invalidateQueries({ queryKey: ['community-posts', communityId, activeCategory] });
+      setShowComposer(false);
+      setPostTitle('');
+      setPostContent('');
+      setPostCategory('GENERAL');
+      toast.success('Post published');
     },
-    onError: () => toast.error('Failed to create post'),
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Failed to publish post');
+    },
   });
 
-  function handleCreatePost(e) {
-    e.preventDefault();
-    if (!newPostTitle.trim() || !newPostContent.trim()) return;
-    createPostMutation.mutate({ title: newPostTitle, content: newPostContent });
+  const likeMutation = useMutation({
+    mutationFn: (postId) => api.post(`/posts/${postId}/like`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['community-posts', communityId, activeCategory] });
+      queryClient.invalidateQueries({ queryKey: ['community-leaderboard', communityId] });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Unable to like post');
+    },
+  });
+
+  function closeComposer() {
+    setShowComposer(false);
+    setPostTitle('');
+    setPostContent('');
+    setPostCategory('GENERAL');
   }
 
-  const navTabs = [
-    { id: 'feed', label: 'Community', icon: null },
-    { id: 'classroom', label: 'Classroom', icon: null },
-    { id: 'calendar', label: 'Calendar', icon: null },
-    { id: 'members', label: 'Members', icon: null },
-    { id: 'map', label: 'Map', icon: null },
-    { id: 'leaderboards', label: 'Leaderboards', icon: null },
-    { id: 'about', label: 'About', icon: null },
-  ];
+  async function handlePostSubmit(event) {
+    event.preventDefault();
+    if (!postTitle.trim() || !postContent.trim()) return;
+
+    await createPostMutation.mutateAsync({
+      communityId,
+      title: postTitle.trim(),
+      content: postContent.trim(),
+      category: postCategory,
+      type: 'DISCUSSION',
+    });
+  }
+
+  async function handleLike(postId) {
+    if (!user) {
+      toast.error('Sign in to interact with posts');
+      return;
+    }
+    if (!isMember) {
+      toast.error('Join community first');
+      return;
+    }
+    await likeMutation.mutateAsync(postId);
+  }
+
+  const isMember = Boolean(membership && membership.status !== 'LEFT' && membership.status !== 'BANNED');
+  const flattenedPosts = useMemo(
+    () => postsPages?.pages?.flatMap((page) => page.posts || []) || [],
+    [postsPages]
+  );
+
+  const filteredPosts = useMemo(() => {
+    const normalized = searchText.trim().toLowerCase();
+    const sorted = [...flattenedPosts].sort(
+      (a, b) =>
+        Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) ||
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    if (!normalized) return sorted;
+    return sorted.filter((post) => {
+      const raw = `${post.title || ''} ${post.content || ''} ${post.author?.name || ''}`;
+      return raw.toLowerCase().includes(normalized);
+    });
+  }, [flattenedPosts, searchText]);
+
+  const filteredMembers = useMemo(() => {
+    const normalized = searchText.trim().toLowerCase();
+    if (!normalized) return members;
+    return members.filter((member) =>
+      `${member.user?.name || ''} ${member.user?.email || ''}`.toLowerCase().includes(normalized)
+    );
+  }, [members, searchText]);
+
+  const memberCount = members.length || community?._count?.members || 0;
+  const adminCount = members.filter((member) => ['OWNER', 'ADMIN'].includes(member.role)).length || 1;
+  const onlineCount = Math.max(1, Math.min(9, Math.round(memberCount * 0.08)));
+
+  const upcomingEventAt = useMemo(() => {
+    const target = new Date();
+    target.setHours(target.getHours() + 44);
+    return target;
+  }, []);
+
+  const canSubmitPost = postTitle.trim().length > 0 && postContent.trim().length > 0;
 
   if (communityLoading || !community) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
-        <div className="animate-spin w-10 h-10 border-2 border-primary-600 border-t-transparent rounded-full" />
+      <div className="min-h-[calc(100dvh-4rem)] bg-gray-100 flex items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-gray-900 border-t-transparent" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Secondary Navigation */}
-      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-16 z-40">
-        <div className="max-w-[1600px] mx-auto px-4">
-          <div className="flex items-center gap-6 h-12 overflow-x-auto no-scrollbar">
-            {navTabs.map((tab) => (
+    <div className="min-h-[calc(100dvh-4rem)] bg-[#f5f5f5]">
+      <div className="sticky top-16 z-40 border-b border-gray-200 bg-white">
+        <div className="mx-auto max-w-[1220px] px-4">
+          <div className="flex h-12 items-center gap-6 overflow-x-auto no-scrollbar">
+            {TABS.map((tab) => (
               <button
                 key={tab.id}
+                type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 text-sm font-medium whitespace-nowrap h-full border-b-2 transition-colors px-1 ${
+                className={`h-full border-b-2 text-base whitespace-nowrap transition-colors ${
                   activeTab === tab.id
-                    ? 'border-gray-900 dark:border-white text-gray-900 dark:text-white'
-                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                    ? 'border-black font-semibold text-black'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
                 {tab.label}
               </button>
             ))}
-            <div className="flex-1" />
-            <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-              <HiSearch className="w-5 h-5" />
-            </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-[1600px] mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* Main Content Area */}
-          <div className="lg:col-span-8 space-y-6">
-            
-            {/* FEED TAB */}
-            {activeTab === 'feed' && (
-              <>
-                {/* Write Something Input */}
-                {community.isMember && user && (
-                  <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm dark:shadow-gray-900/30 mb-6">
-                    <div className="flex gap-3 items-center">
-                      <Avatar src={user.avatar} name={user.name} size="md" />
-                      <div 
-                        onClick={() => setShowNewPostModal(true)}
-                        className="flex-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors rounded-full px-4 py-2.5 text-gray-500 dark:text-gray-400 text-sm cursor-pointer"
-                      >
-                        Write something...
-                      </div>
+      <div className="mx-auto grid w-full max-w-[1220px] grid-cols-1 gap-6 px-4 py-6 lg:grid-cols-[minmax(0,700px)_320px] lg:justify-between">
+        <section className="space-y-4">
+          {activeTab === 'community' && (
+            <>
+              <div className={`rounded-xl border border-gray-200 bg-white shadow-sm ${showComposer ? 'relative z-[60] p-4' : 'p-3'}`}>
+                {showComposer ? (
+                  <form onSubmit={handlePostSubmit} className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Avatar src={user?.avatar} name={user?.name || 'You'} size="sm" />
+                      <p className="text-sm text-gray-600">
+                        <span className="font-semibold text-gray-900">{user?.name || 'You'}</span>{' '}
+                        posting in{' '}
+                        <span className="font-semibold text-gray-900">{community.name}</span>
+                      </p>
                     </div>
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 px-1">
-                      <div className="flex gap-4">
-                        <button className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-xs font-medium">
-                          <HiVideoCamera className="w-4 h-4 text-gray-400" />
-                          Video
-                        </button>
-                        <button className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-xs font-medium">
-                          <HiPaperClip className="w-4 h-4 text-gray-400" />
-                          Attachment
-                        </button>
-                        <button className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 text-xs font-medium">
-                          <HiChartBar className="w-4 h-4 text-gray-400" />
-                          Poll
-                        </button>
-                      </div>
-                      <div className="flex gap-2">
-                         <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                            <HiEmojiHappy className="w-5 h-5" />
-                         </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
 
-                {/* Filters */}
-                <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
-                  {['All', 'Wins', 'General', 'Question', 'Announcements'].map((filter, i) => (
-                    <button 
-                      key={filter}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${
-                        i === 0 
-                          ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900' 
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      {filter}
-                    </button>
+                    <div className="space-y-3">
+                      <input
+                        value={postTitle}
+                        onChange={(event) => setPostTitle(event.target.value)}
+                        placeholder="Title"
+                        className="w-full border-0 p-0 text-4xl font-semibold text-gray-900 placeholder:text-gray-400 focus:outline-none"
+                      />
+                      <textarea
+                        value={postContent}
+                        onChange={(event) => setPostContent(event.target.value)}
+                        placeholder="Write something..."
+                        rows={4}
+                        className="w-full resize-none border-0 p-0 text-3xl text-gray-800 placeholder:text-gray-400 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-3">
+                      <div className="flex flex-wrap items-center gap-1">
+                        <button
+                          type="button"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                        >
+                          <Paperclip className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                        >
+                          <Link2 className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                        >
+                          <Video className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                        >
+                          <BarChart3 className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                        >
+                          <Smile className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          className="inline-flex h-8 items-center justify-center rounded-full px-2 text-xs font-semibold uppercase tracking-wide text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                        >
+                          GIF
+                        </button>
+
+                        <label className="relative ml-2 inline-flex h-8 items-center rounded-full px-3 text-sm text-gray-600 hover:bg-gray-100">
+                          <select
+                            value={postCategory}
+                            onChange={(event) => setPostCategory(event.target.value)}
+                            className="appearance-none bg-transparent pr-5 text-sm font-medium text-gray-600 outline-none"
+                          >
+                            {CATEGORY_OPTIONS.filter((option) => option.value !== 'ALL').map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown className="pointer-events-none absolute right-2 h-3.5 w-3.5 text-gray-500" />
+                        </label>
+                      </div>
+
+                      <div className="ml-auto flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={closeComposer}
+                          className="h-9 rounded-lg px-4 text-sm font-semibold uppercase tracking-wide text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
+                        >
+                          Cancel
+                        </button>
+                        <Button
+                          type="submit"
+                          variant="secondary"
+                          size="sm"
+                          isLoading={createPostMutation.isPending}
+                          disabled={!canSubmitPost}
+                          className="h-9 min-w-[92px] rounded-md border border-gray-200 bg-gray-200 px-4 text-sm font-semibold uppercase tracking-wide text-gray-700 hover:bg-gray-300"
+                        >
+                          Post
+                        </Button>
+                      </div>
+                    </div>
+                  </form>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!user) {
+                        toast.error('Sign in to create posts');
+                        return;
+                      }
+                      if (!isMember) {
+                        toast.error('Join the community to post');
+                        return;
+                      }
+                      setShowComposer(true);
+                    }}
+                    className="flex w-full items-center gap-3 rounded-lg px-2 py-1 text-left transition-colors hover:bg-gray-50"
+                  >
+                    <Avatar src={user?.avatar} name={user?.name || 'You'} size="md" />
+                    <span className="text-lg font-medium text-gray-500">Write something</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600">
+                <CalendarDays className="h-4 w-4 text-gray-500" />
+                <span>
+                  Editing feedback is happening in {hoursUntil(upcomingEventAt)} hours
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                {CATEGORY_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setActiveCategory(option.value)}
+                    className={`h-9 rounded-full border px-3.5 text-sm whitespace-nowrap transition-colors ${
+                      activeCategory === option.value
+                        ? 'border-gray-900 bg-gray-900 text-white'
+                        : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+
+              {postsLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((value) => (
+                    <div
+                      key={value}
+                      className="h-40 animate-pulse rounded-xl border border-gray-200 bg-white"
+                    />
                   ))}
                 </div>
-
-                {/* Posts List */}
-                {postsLoading ? (
-                  <div className="space-y-4">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6 animate-pulse">
-                        <div className="flex gap-3 mb-4">
-                          <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700" />
-                          <div className="flex-1 space-y-2">
-                            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
-                            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/4" />
-                          </div>
-                        </div>
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2" />
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2" />
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {posts?.length ? (
-                      posts.map((post) => (
-                        <Link
-                          key={post.id}
-                          to={`/post/${post.id}`}
-                          className="block bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md transition-all group"
-                        >
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex items-center gap-3">
-                              <Avatar src={post.author.avatar} name={post.author.name} size="md" />
-                              <div>
-                                <h4 className="text-sm font-semibold text-gray-900 dark:text-white">{post.author.name}</h4>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                  {new Date(post.createdAt).toLocaleDateString()} • General
-                                </p>
-                              </div>
-                            </div>
-                            {post.pinned && (
-                              <span className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full">
-                                <HiPaperClip className="w-3 h-3 transform rotate-45" /> Pinned
-                              </span>
-                            )}
-                          </div>
-                          
-                          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 group-hover:text-primary-600 transition-colors">
-                            {post.title}
-                          </h3>
-                          <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed line-clamp-3 mb-4">
-                            {post.content}
-                          </p>
-                          
-                          <div className="flex items-center justify-between pt-4 border-t border-gray-50 dark:border-gray-800">
-                            <div className="flex gap-4">
-                              <button className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-pink-500 transition-colors text-sm">
-                                <HiHeart className="w-5 h-5" />
-                                <span className="font-medium">{post.likeCount}</span>
-                              </button>
-                              <button className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-primary-600 transition-colors text-sm">
-                                <HiChat className="w-5 h-5" />
-                                <span className="font-medium">{post.commentCount}</span>
-                                <span className="hidden sm:inline">comments</span>
-                              </button>
-                            </div>
-                            {post.commentCount > 0 && (
-                              <div className="flex -space-x-2">
-                                {[...Array(Math.min(3, post.commentCount))].map((_, i) => (
-                                  <div key={i} className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 border-2 border-white dark:border-gray-900" />
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </Link>
-                      ))
-                    ) : (
-                      <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700">
-                        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <HiChat className="w-8 h-8 text-gray-400" />
-                        </div>
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">No posts yet</h3>
-                        <p className="text-gray-500 dark:text-gray-400 mb-4">Be the first to start a conversation!</p>
-                        <Button onClick={() => setShowNewPostModal(true)}>Create Post</Button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* CLASSROOM TAB */}
-            {activeTab === 'classroom' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {coursesLoading ? (
-                  [1, 2, 3].map((i) => (
-                    <div key={i} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden animate-pulse h-64" />
-                  ))
-                ) : courses?.length ? (
-                  courses.map((course) => (
-                    <Link
-                      key={course.id}
-                      to={`/course/${course.id}`}
-                      className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all group flex flex-col h-full"
+              ) : filteredPosts.length ? (
+                <div className="space-y-3">
+                  {filteredPosts.map((post) => (
+                    <article
+                      key={post.id}
+                      className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
                     >
-                      <div className="h-40 bg-gray-200 dark:bg-gray-700 relative overflow-hidden">
-                        {course.coverImage ? (
-                          <img src={course.coverImage} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-                            <HiBookOpen className="w-12 h-12 text-white/20" />
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-start gap-3">
+                          <Avatar src={post.author?.avatar} name={post.author?.name} size="sm" />
+                          <div className="min-w-0">
+                            <p className="truncate text-base font-semibold text-gray-900">
+                              {post.author?.name}
+                            </p>
+                            <p className="truncate text-xs text-gray-500">
+                              {formatDate(post.createdAt)} - {formatCategory(post.category)}
+                            </p>
+                          </div>
+                        </div>
+                        {post.pinned && (
+                          <div className="inline-flex items-center gap-1 text-xs font-medium text-gray-600">
+                            <Pin className="h-3.5 w-3.5" />
+                            Pinned
                           </div>
                         )}
-                        <div className="absolute top-3 right-3 bg-black/50 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded">
-                          {course.modules?.length || 0} Modules
-                        </div>
                       </div>
-                      <div className="p-5 flex-1 flex flex-col">
-                        <h3 className="font-bold text-gray-900 dark:text-white mb-2 line-clamp-1 group-hover:text-primary-600 transition-colors">
-                          {course.title}
+
+                      <Link to={`/post/${post.id}`} className="mt-3 block">
+                        <h3 className="text-[30px] leading-tight font-bold text-gray-900 sm:text-[32px]">
+                          {post.title}
                         </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-4 flex-1">
-                          {course.description || 'No description available'}
-                        </p>
-                        
-                        <div className="mt-auto">
-                          <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 mb-2 overflow-hidden">
-                            <div className="bg-green-500 h-1.5 rounded-full w-[0%]" />
-                          </div>
-                          <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 font-medium">
-                            <span>0% complete</span>
-                            <span>{course.price ? `$${course.price}` : 'Free'}</span>
+                        <div className="mt-2 grid gap-3 sm:grid-cols-[1fr_120px] sm:items-start">
+                          <p className="text-[18px] leading-8 text-gray-700 line-clamp-4">
+                            {post.content}
+                          </p>
+                          <div className="overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
+                            {community.coverImage ? (
+                              <img src={community.coverImage} alt="" className="h-24 w-full object-cover" />
+                            ) : (
+                              <div className="h-24 w-full bg-gradient-to-br from-gray-100 to-gray-200" />
+                            )}
                           </div>
                         </div>
+                      </Link>
+
+                      <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
+                        <div className="flex items-center gap-5">
+                          <button
+                            type="button"
+                            onClick={() => handleLike(post.id)}
+                            className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-800"
+                          >
+                            <Heart
+                              className="h-4 w-4"
+                              fill={post.isLiked ? 'currentColor' : 'none'}
+                            />
+                            {post.likeCount || 0}
+                          </button>
+                          <Link
+                            to={`/post/${post.id}`}
+                            className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-800"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                            {post.commentCount || 0}
+                          </Link>
+                        </div>
+                        {post.commentCount > 0 && (
+                          <p className="text-xs font-medium text-blue-600">New comment activity</p>
+                        )}
                       </div>
-                    </Link>
-                  ))
-                ) : (
-                  <div className="col-span-full text-center py-16">
-                    <p className="text-gray-500 dark:text-gray-400">No courses available yet.</p>
-                  </div>
-                )}
-              </div>
-            )}
+                    </article>
+                  ))}
 
-            {/* LEADERBOARDS TAB */}
-            {activeTab === 'leaderboards' && (
-              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <div className="p-6 border-b border-gray-100 dark:border-gray-800">
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">Leaderboard</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Top contributors this month</p>
-                </div>
-                {leaderboardLoading ? (
-                  <div className="p-6 space-y-4 animate-pulse">
-                    {[1, 2, 3].map(i => <div key={i} className="h-12 bg-gray-100 dark:bg-gray-800 rounded-lg" />)}
-                  </div>
-                ) : (
-                  <table className="w-full">
-                    <thead className="bg-gray-50 dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800">
-                      <tr>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rank</th>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Member</th>
-                        <th className="text-right px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Points</th>
-                        <th className="text-right px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Level</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
-                      {leaderboard?.map((entry) => (
-                        <tr key={entry.user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                              entry.rank === 1 ? 'bg-yellow-100 text-yellow-700' :
-                              entry.rank === 2 ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300' :
-                              entry.rank === 3 ? 'bg-orange-100 text-orange-700' :
-                              'text-gray-500 dark:text-gray-400'
-                            }`}>
-                              {entry.rank}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-3">
-                              <Avatar src={entry.user.avatar} name={entry.user.name} size="sm" />
-                              <span className="font-medium text-gray-900 dark:text-white">{entry.user.name}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right font-mono text-gray-600 dark:text-gray-400">
-                            {entry.points}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right">
-                            <span className="px-2 py-1 bg-primary-50 text-primary-700 text-xs font-medium rounded-full">
-                              {entry.levelName}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            )}
-
-            {/* ABOUT TAB */}
-            {activeTab === 'about' && (
-              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-8 space-y-8">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">About {community.name}</h2>
-                  <p className="text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
-                    {community.description || 'No description provided.'}
-                  </p>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-8 border-t border-gray-100 dark:border-gray-800">
-                  <div className="bg-gray-50 dark:bg-gray-950 p-4 rounded-xl">
-                    <div className="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg flex items-center justify-center text-primary-600 mb-3 shadow-sm dark:shadow-gray-900/30">
-                      <HiUserGroup className="w-6 h-6" />
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{community.memberCount}</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">Active Members</div>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-950 p-4 rounded-xl">
-                    <div className="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg flex items-center justify-center text-primary-600 mb-3 shadow-sm dark:shadow-gray-900/30">
-                      <HiBookOpen className="w-6 h-6" />
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{community.courseCount}</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">Learning Courses</div>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-950 p-4 rounded-xl">
-                    <div className="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg flex items-center justify-center text-primary-600 mb-3 shadow-sm dark:shadow-gray-900/30">
-                      <HiChat className="w-6 h-6" />
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">Active</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">Community Status</div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Placeholder Tabs */}
-            {(activeTab === 'calendar' || activeTab === 'map' || activeTab === 'members') && (
-              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
-                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                  {activeTab === 'calendar' && <HiCalendar className="w-8 h-8 text-gray-400" />}
-                  {activeTab === 'map' && <HiMap className="w-8 h-8 text-gray-400" />}
-                  {activeTab === 'members' && <HiUserGroup className="w-8 h-8 text-gray-400" />}
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1 capitalize">{activeTab}</h3>
-                <p className="text-gray-500 dark:text-gray-400">This feature is coming soon to Makteb.</p>
-              </div>
-            )}
-
-          </div>
-
-          {/* Right Sidebar (Sticky) */}
-          <div className="lg:col-span-4 space-y-6">
-            
-            {/* Community Info Card */}
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm dark:shadow-gray-900/30">
-              <div className="h-24 bg-gray-200 dark:bg-gray-700 relative">
-                {community.coverImage ? (
-                  <img src={community.coverImage} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-r from-gray-800 to-gray-900" />
-                )}
-              </div>
-              <div className="px-6 pb-6 relative">
-                <div className="w-20 h-20 bg-white dark:bg-gray-800 rounded-xl border-4 border-white dark:border-gray-900 shadow-sm dark:shadow-gray-900/30 absolute -top-10 left-6 flex items-center justify-center overflow-hidden">
-                   <div className="w-full h-full bg-black text-white flex items-center justify-center font-bold text-2xl">
-                     {community.name.charAt(0)}
-                   </div>
-                </div>
-                <div className="mt-12">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">{community.name}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">makteb.com/{community.slug}</p>
-                  
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-4 line-clamp-3">
-                    {community.description || 'Welcome to our community! Join us to learn and grow together.'}
-                  </p>
-                  
-                  <div className="flex gap-6 mt-6 border-t border-gray-100 dark:border-gray-800 pt-4">
-                    <div>
-                      <div className="text-lg font-bold text-gray-900 dark:text-white">{community.memberCount}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Members</div>
-                    </div>
-                    <div>
-                      <div className="text-lg font-bold text-gray-900 dark:text-white">1</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Online</div>
-                    </div>
-                    <div>
-                      <div className="text-lg font-bold text-gray-900 dark:text-white">1</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Admins</div>
-                    </div>
-                  </div>
-
-                  {user && (
-                    <div className="mt-6">
-                      {community.isMember ? (
-                        <Button 
-                          className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm dark:shadow-gray-900/30"
-                          onClick={() => leaveMutation.mutate()}
-                          isLoading={leaveMutation.isPending}
-                        >
-                          LEAVE COMMUNITY
-                        </Button>
-                      ) : (
-                        <Button 
-                          className="w-full"
-                          onClick={() => joinMutation.mutate()}
-                          isLoading={joinMutation.isPending}
-                        >
-                          JOIN COMMUNITY
-                        </Button>
-                      )}
+                  <div ref={loadMoreRef} className="h-5" />
+                  {isFetchingNextPage && (
+                    <div className="flex justify-center py-2">
+                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-800 border-t-transparent" />
                     </div>
                   )}
                 </div>
+              ) : (
+                <div className="rounded-xl border border-gray-200 bg-white p-10 text-center">
+                  <p className="text-lg font-semibold text-gray-900">No posts found</p>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Try another category or clear the search query.
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+
+          {activeTab === 'classroom' && (
+            <div className="space-y-3">
+              {coursesLoading ? (
+                [1, 2, 3].map((value) => (
+                  <div
+                    key={value}
+                    className="h-40 animate-pulse rounded-xl border border-gray-200 bg-white"
+                  />
+                ))
+              ) : courses.length ? (
+                courses.map((course) => (
+                  <Link
+                    key={course.id}
+                    to={`/course/${course.id}`}
+                    className="block rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="text-xl font-semibold text-gray-900">{course.title}</h3>
+                        <p className="mt-1 text-sm text-gray-600 line-clamp-2">
+                          {course.description || 'No description available for this course yet.'}
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
+                        {course.modules?.length || 0} modules
+                      </span>
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500">
+                  No courses available yet.
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'calendar' && (
+            <div className="rounded-xl border border-gray-200 bg-white p-6">
+              <h3 className="text-lg font-semibold text-gray-900">Upcoming Events</h3>
+              <div className="mt-4 space-y-3">
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <p className="text-sm font-medium text-gray-900">Editing Feedback Session</p>
+                  <p className="mt-1 text-sm text-gray-600">
+                    {upcomingEventAt.toLocaleString()}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <p className="text-sm font-medium text-gray-900">Weekly Live Q&A</p>
+                  <p className="mt-1 text-sm text-gray-600">
+                    {new Date(upcomingEventAt.getTime() + 72 * 3_600_000).toLocaleString()}
+                  </p>
+                </div>
               </div>
             </div>
+          )}
 
-            {/* Mini Leaderboard */}
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm dark:shadow-gray-900/30">
-              <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
-                <h3 className="font-bold text-gray-900 dark:text-white">Leaderboard (30-day)</h3>
-                <button 
-                  onClick={() => setActiveTab('leaderboards')}
-                  className="text-xs text-primary-600 font-medium hover:text-primary-700"
-                >
-                  View all
-                </button>
+          {activeTab === 'members' && (
+            <div className="rounded-xl border border-gray-200 bg-white">
+              <div className="border-b border-gray-100 px-5 py-4">
+                <h3 className="text-lg font-semibold text-gray-900">Members</h3>
               </div>
-              <div className="p-2">
-                {leaderboardLoading ? (
-                  <div className="space-y-2 p-2">
-                    {[1, 2, 3].map(i => <div key={i} className="h-10 bg-gray-100 dark:bg-gray-800 rounded" />)}
-                  </div>
-                ) : leaderboard?.slice(0, 5).map((entry, i) => (
-                  <div key={entry.user.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                      i === 0 ? 'bg-yellow-100 text-yellow-700' :
-                      i === 1 ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300' :
-                      i === 2 ? 'bg-orange-100 text-orange-700' :
-                      'text-gray-400'
-                    }`}>
-                      {i + 1}
+              <div className="divide-y divide-gray-100">
+                {filteredMembers.map((entry) => (
+                  <div key={entry.id} className="flex items-center justify-between gap-3 px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar src={entry.user?.avatar} name={entry.user?.name} size="md" />
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{entry.user?.name}</p>
+                        <p className="text-xs text-gray-500">{entry.role}</p>
+                      </div>
                     </div>
-                    <Avatar src={entry.user.avatar} name={entry.user.name} size="sm" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{entry.user.name}</div>
-                    </div>
-                    <div className="text-xs font-mono text-primary-600 font-medium">
-                      +{entry.points}
-                    </div>
+                    <span className="text-xs text-gray-500">
+                      Joined {formatDate(entry.joinedAt)}
+                    </span>
                   </div>
                 ))}
-                {leaderboard?.length === 0 && (
-                  <p className="text-center text-gray-500 dark:text-gray-400 text-sm py-4">No data yet</p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'map' && (
+            <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
+              <Map className="mx-auto h-10 w-10 text-gray-400" />
+              <p className="mt-3 text-lg font-semibold text-gray-900">Community Map</p>
+              <p className="mt-1 text-sm text-gray-500">
+                Map visualization can be plugged in here.
+              </p>
+            </div>
+          )}
+
+          {activeTab === 'leaderboards' && (
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+              <div className="border-b border-gray-100 px-5 py-4">
+                <h3 className="text-lg font-semibold text-gray-900">Leaderboard (30-day)</h3>
+              </div>
+              {leaderboardLoading ? (
+                <div className="space-y-2 p-4">
+                  {[1, 2, 3, 4].map((value) => (
+                    <div key={value} className="h-10 animate-pulse rounded bg-gray-100" />
+                  ))}
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+                    <tr>
+                      <th className="px-5 py-3 text-left">Rank</th>
+                      <th className="px-5 py-3 text-left">Member</th>
+                      <th className="px-5 py-3 text-right">Points</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {leaderboard.map((entry) => (
+                      <tr key={entry.user.id}>
+                        <td className="px-5 py-3 text-sm text-gray-700">{entry.rank}</td>
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-2">
+                            <Avatar src={entry.user.avatar} name={entry.user.name} size="sm" />
+                            <span className="text-sm font-medium text-gray-900">{entry.user.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3 text-right text-sm font-semibold text-blue-600">
+                          +{entry.points}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'about' && (
+            <div className="rounded-xl border border-gray-200 bg-white p-6">
+              <h3 className="text-2xl font-semibold text-gray-900">{community.name}</h3>
+              <p className="mt-3 text-gray-700 leading-7">
+                {community.description || 'No description provided yet.'}
+              </p>
+              <div className="mt-6 grid grid-cols-3 gap-3">
+                <div className="rounded-lg border border-gray-200 p-4">
+                  <p className="text-2xl font-semibold text-gray-900">{memberCount}</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Members</p>
+                </div>
+                <div className="rounded-lg border border-gray-200 p-4">
+                  <p className="text-2xl font-semibold text-gray-900">{onlineCount}</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Online</p>
+                </div>
+                <div className="rounded-lg border border-gray-200 p-4">
+                  <p className="text-2xl font-semibold text-gray-900">{adminCount}</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Admins</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+
+        <aside className="space-y-4">
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+            <div className="h-28 bg-black">
+              {community.coverImage && (
+                <img src={community.coverImage} alt="" className="h-full w-full object-cover" />
+              )}
+            </div>
+            <div className="p-4">
+              <h3 className="text-[32px] leading-tight font-semibold text-gray-900">
+                {community.name}
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">makteb.com/{community.slug}</p>
+              <p className="mt-3 text-sm leading-6 text-gray-700">
+                {community.description || 'We help members learn and grow together.'}
+              </p>
+              <p className="mt-3 text-sm text-gray-700">Support: {buildSupportEmail(community.slug)}</p>
+
+              <div className="mt-3 space-y-1 text-sm text-gray-600">
+                <a href="#" className="flex items-center gap-1 hover:text-gray-900">
+                  <Users className="h-3.5 w-3.5" />
+                  New? Start here
+                </a>
+                <a href="#" className="flex items-center gap-1 hover:text-gray-900">
+                  <Search className="h-3.5 w-3.5" />
+                  Results page
+                </a>
+              </div>
+
+              <div className="mt-4 grid grid-cols-3 gap-2 border-y border-gray-100 py-3 text-center">
+                <div>
+                  <p className="text-2xl font-semibold text-gray-900">{memberCount}</p>
+                  <p className="text-xs text-gray-500">Members</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-semibold text-gray-900">{onlineCount}</p>
+                  <p className="text-xs text-gray-500">Online</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-semibold text-gray-900">{adminCount}</p>
+                  <p className="text-xs text-gray-500">Admins</p>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                {isMember ? (
+                  <button
+                    type="button"
+                    className="h-10 w-full rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+                  >
+                    INVITE PEOPLE
+                  </button>
+                ) : (
+                  <Button
+                    type="button"
+                    className="w-full"
+                    onClick={() => joinMutation.mutate()}
+                    isLoading={joinMutation.isPending}
+                  >
+                    JOIN COMMUNITY
+                  </Button>
+                )}
+
+                {isMember && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => leaveMutation.mutate()}
+                    isLoading={leaveMutation.isPending}
+                  >
+                    LEAVE COMMUNITY
+                  </Button>
                 )}
               </div>
             </div>
-
-            {/* Footer */}
-            <div className="text-xs text-gray-400 text-center">
-              <p>© 2026 Makteb Inc.</p>
-              <div className="flex justify-center gap-3 mt-2">
-                <a href="#" className="hover:text-gray-600 dark:hover:text-gray-300">Privacy</a>
-                <a href="#" className="hover:text-gray-600 dark:hover:text-gray-300">Terms</a>
-                <a href="#" className="hover:text-gray-600 dark:hover:text-gray-300">Help</a>
-              </div>
-            </div>
-
           </div>
-        </div>
-      </div>
 
-      {/* New Post Modal */}
-      {showNewPostModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Create Post</h2>
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h4 className="text-lg font-semibold text-gray-900">Leaderboard (30-day)</h4>
               <button
-                onClick={() => setShowNewPostModal(false)}
-                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+                type="button"
+                onClick={() => setActiveTab('leaderboards')}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-700"
               >
-                <HiX className="w-6 h-6" />
+                View all
               </button>
             </div>
-            <form onSubmit={handleCreatePost} className="p-4 space-y-4">
-              <Input
-                value={newPostTitle}
-                onChange={(e) => setNewPostTitle(e.target.value)}
-                placeholder="Post Title"
-                className="text-lg font-bold border-none px-0 focus:ring-0 placeholder-gray-400"
-                required
-              />
-              <textarea
-                value={newPostContent}
-                onChange={(e) => setNewPostContent(e.target.value)}
-                placeholder="Share something with the community..."
-                rows={6}
-                required
-                className="w-full resize-none border-none px-0 focus:ring-0 text-gray-600 dark:text-gray-400 placeholder-gray-400 text-base bg-transparent"
-              />
-              <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-800">
-                <div className="flex gap-2 text-gray-400">
-                  <button type="button" className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
-                    <HiVideoCamera className="w-5 h-5" />
-                  </button>
-                  <button type="button" className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
-                    <HiPaperClip className="w-5 h-5" />
-                  </button>
-                  <button type="button" className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
-                    <HiChartBar className="w-5 h-5" />
-                  </button>
-                </div>
-                <div className="flex gap-3">
-                  <Button variant="ghost" type="button" onClick={() => setShowNewPostModal(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" isLoading={createPostMutation.isPending}>
-                    Post
-                  </Button>
-                </div>
+            {leaderboardLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3, 4].map((value) => (
+                  <div key={value} className="h-9 animate-pulse rounded bg-gray-100" />
+                ))}
               </div>
-            </form>
+            ) : (
+              <div className="space-y-2">
+                {leaderboard.slice(0, 4).map((entry) => (
+                  <div
+                    key={entry.user.id}
+                    className="flex items-center justify-between rounded-lg p-2 transition-colors hover:bg-gray-50"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="w-5 text-sm font-semibold text-gray-500">{entry.rank}</span>
+                      <Avatar src={entry.user.avatar} name={entry.user.name} size="sm" />
+                      <span className="truncate text-sm text-gray-900">{entry.user.name}</span>
+                    </div>
+                    <span className="text-sm font-semibold text-blue-600">+{entry.points}</span>
+                  </div>
+                ))}
+                {!leaderboard.length && (
+                  <p className="py-3 text-center text-sm text-gray-500">No leaderboard data yet.</p>
+                )}
+              </div>
+            )}
           </div>
-        </div>
+        </aside>
+      </div>
+
+      {showComposer && (
+        <button
+          type="button"
+          aria-label="Close post composer"
+          onClick={closeComposer}
+          className="fixed inset-0 z-[50] cursor-default bg-black/40"
+        />
       )}
     </div>
   );

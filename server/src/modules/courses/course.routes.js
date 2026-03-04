@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { param } from '../../lib/params.js';
+import { param, parsePagination, query } from '../../lib/params.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
 import * as courseService from './course.service.js';
@@ -29,9 +29,21 @@ const createModuleSchema = z.object({
   order: z.number().int().optional(),
 });
 
+router.get('/', async (req, res) => {
+  const search = query(req, 'search');
+  const pagination = parsePagination(req, 12);
+  const result = await courseService.listCourses({ search, ...pagination });
+  res.json(result);
+});
+
 router.get('/community/:communityId', async (req, res) => {
   const courses = await courseService.listCommunityCourses(param(req, 'communityId'));
   res.json({ courses });
+});
+
+router.get('/enrolled/me', requireAuth, async (req, res) => {
+  const enrolledCourses = await courseService.listEnrolledCourses(req.userId);
+  res.json({ enrolledCourses });
 });
 
 router.get('/:id', async (req, res) => {

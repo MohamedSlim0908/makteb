@@ -1,0 +1,261 @@
+@startuml
+hide circle
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+
+'========================
+' USERS
+'========================
+entity profiles {
+  +id : uuid <<PK>>
+  --
+  full_name : text
+  email : text
+  password_hash : text
+  avatar_url : text
+  bio : text
+  created_at : timestamptz
+}
+
+'========================
+' COMMUNITY (GROUP)
+'========================
+entity communities {
+  +id : uuid <<PK>>
+  --
+  owner_id : uuid <<FK>>
+  name : text
+  slug : text
+  description : text
+  cover_url : text
+  visibility : text  'public|private
+  created_at : timestamptz
+}
+
+entity community_memberships {
+  +id : uuid <<PK>>
+  --
+  community_id : uuid <<FK>>
+  user_id : uuid <<FK>>
+  role : text        'owner|admin|moderator|member
+  status : text      'active|invited|banned|left
+  joined_at : timestamptz
+}
+
+entity invites {
+  +id : uuid <<PK>>
+  --
+  community_id : uuid <<FK>>
+  invited_email : text
+  invited_by : uuid <<FK>>
+  token : text
+  status : text      'pending|accepted|expired
+  created_at : timestamptz
+  expires_at : timestamptz
+}
+
+'========================
+' POSTS (COMMUNITY FEED)
+'========================
+entity posts {
+  +id : uuid <<PK>>
+  --
+  community_id : uuid <<FK>>
+  author_id : uuid <<FK>>
+  title : text
+  content : text
+  type : text        'post|announcement|question
+  is_pinned : boolean
+  created_at : timestamptz
+}
+
+entity comments {
+  +id : uuid <<PK>>
+  --
+  post_id : uuid <<FK>>
+  author_id : uuid <<FK>>
+  parent_comment_id : uuid <<FK>>
+  content : text
+  created_at : timestamptz
+}
+
+entity reactions {
+  +id : uuid <<PK>>
+  --
+  target_type : text   'post|comment
+  target_id : uuid
+  user_id : uuid <<FK>>
+  emoji : text
+  created_at : timestamptz
+}
+
+'========================
+' COURSES (CLASSROOM)
+'========================
+entity courses {
+  +id : uuid <<PK>>
+  --
+  community_id : uuid <<FK>>
+  title : text
+  description : text
+  cover_url : text
+  status : text        'draft|published
+  created_at : timestamptz
+}
+
+entity course_modules {
+  +id : uuid <<PK>>
+  --
+  course_id : uuid <<FK>>
+  title : text
+  sort_order : int
+}
+
+entity lessons {
+  +id : uuid <<PK>>
+  --
+  module_id : uuid <<FK>>
+  title : text
+  content : text
+  video_url : text
+  attachments_json : jsonb
+  sort_order : int
+}
+
+entity lesson_progress {
+  +id : uuid <<PK>>
+  --
+  lesson_id : uuid <<FK>>
+  user_id : uuid <<FK>>
+  status : text        'not_started|in_progress|completed
+  completed_at : timestamptz
+}
+
+'========================
+' CALENDAR (EVENTS)
+'========================
+entity events {
+  +id : uuid <<PK>>
+  --
+  community_id : uuid <<FK>>
+  created_by : uuid <<FK>>
+  title : text
+  description : text
+  start_at : timestamptz
+  end_at : timestamptz
+  meeting_url : text
+  created_at : timestamptz
+}
+
+entity event_attendance {
+  +id : uuid <<PK>>
+  --
+  event_id : uuid <<FK>>
+  user_id : uuid <<FK>>
+  status : text        'going|maybe|not_going
+  responded_at : timestamptz
+}
+
+'========================
+' GAMIFICATION (POINTS/LEVELS)
+'========================
+entity points_ledger {
+  +id : uuid <<PK>>
+  --
+  community_id : uuid <<FK>>
+  user_id : uuid <<FK>>
+  source_type : text   'post|comment|lesson|event|manual
+  source_id : uuid
+  points : int
+  created_at : timestamptz
+}
+
+entity community_levels {
+  +id : uuid <<PK>>
+  --
+  community_id : uuid <<FK>>
+  level_number : int
+  required_points : int
+  title : text
+  unlock_description : text
+}
+
+'========================
+' PAYMENTS (MEMBERSHIP)
+'========================
+entity plans {
+  +id : uuid <<PK>>
+  --
+  community_id : uuid <<FK>>
+  name : text
+  price_cents : int
+  currency : text
+  interval : text     'month|year|one_time
+  is_active : boolean
+}
+
+entity subscriptions {
+  +id : uuid <<PK>>
+  --
+  plan_id : uuid <<FK>>
+  user_id : uuid <<FK>>
+  status : text        'active|past_due|canceled|trialing
+  started_at : timestamptz
+  current_period_end : timestamptz
+  canceled_at : timestamptz
+}
+
+entity payments {
+  +id : uuid <<PK>>
+  --
+  subscription_id : uuid <<FK>>
+  provider : text      'stripe|flouci|cash|other
+  provider_ref : text
+  amount_cents : int
+  currency : text
+  status : text        'succeeded|failed|pending|refunded
+  created_at : timestamptz
+}
+
+'========================
+' RELATIONSHIPS
+'========================
+profiles ||--o{ communities : owns
+communities ||--o{ community_memberships
+profiles ||--o{ community_memberships
+
+communities ||--o{ invites
+profiles ||--o{ invites : invited_by
+
+communities ||--o{ posts
+profiles ||--o{ posts : author
+
+posts ||--o{ comments
+profiles ||--o{ comments : author
+comments ||--o{ comments : replies
+
+profiles ||--o{ reactions
+posts ||--o{ reactions
+comments ||--o{ reactions
+
+communities ||--o{ courses
+courses ||--o{ course_modules
+course_modules ||--o{ lessons
+lessons ||--o{ lesson_progress
+profiles ||--o{ lesson_progress
+
+communities ||--o{ events
+events ||--o{ event_attendance
+profiles ||--o{ event_attendance
+
+communities ||--o{ points_ledger
+profiles ||--o{ points_ledger
+
+communities ||--o{ community_levels
+
+communities ||--o{ plans
+plans ||--o{ subscriptions
+profiles ||--o{ subscriptions
+subscriptions ||--o{ payments
+
+@enduml

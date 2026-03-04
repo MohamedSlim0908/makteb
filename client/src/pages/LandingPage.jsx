@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { HiUserGroup, HiAcademicCap, HiStar } from 'react-icons/hi';
+import { GraduationCap, Star, Users } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 
 export function LandingPage() {
@@ -45,7 +45,7 @@ export function LandingPage() {
           <div className="grid md:grid-cols-3 gap-12">
             <div className="text-center">
               <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary-100 text-primary-600 mb-4">
-                <HiUserGroup className="w-7 h-7" />
+                <Users className="w-7 h-7" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Vibrant Communities</h3>
               <p className="text-gray-600 dark:text-gray-400">
@@ -54,7 +54,7 @@ export function LandingPage() {
             </div>
             <div className="text-center">
               <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary-100 text-primary-600 mb-4">
-                <HiAcademicCap className="w-7 h-7" />
+                <GraduationCap className="w-7 h-7" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Structured Courses</h3>
               <p className="text-gray-600 dark:text-gray-400">
@@ -63,7 +63,7 @@ export function LandingPage() {
             </div>
             <div className="text-center">
               <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary-100 text-primary-600 mb-4">
-                <HiStar className="w-7 h-7" />
+                <Star className="w-7 h-7" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Gamification</h3>
               <p className="text-gray-600 dark:text-gray-400">

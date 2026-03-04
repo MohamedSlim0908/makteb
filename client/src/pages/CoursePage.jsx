@@ -1,24 +1,56 @@
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { HiCheck, HiChevronDown, HiChevronRight, HiPlay } from 'react-icons/hi';
-import { Button } from '../components/ui/Button';
-import { Avatar } from '../components/ui/Avatar';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
+import { Lock } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
-import toast from 'react-hot-toast';
+import { Button } from '../components/ui/Button';
+import { CourseTabs } from '../components/course-community/CourseTabs';
+import { PostComposer } from '../components/course-community/PostComposer';
+import { CategoryFilters } from '../components/course-community/CategoryFilters';
+import { PostCard } from '../components/course-community/PostCard';
+import { CommunitySidebar } from '../components/course-community/CommunitySidebar';
+import { Leaderboard } from '../components/course-community/Leaderboard';
+import { MembersList } from '../components/course-community/MembersList';
+import { MapView } from '../components/course-community/MapView';
+import { CalendarMonthView } from '../components/course-community/CalendarMonthView';
+import {
+  COURSE_TABS,
+  POST_CATEGORIES,
+  findUpcomingEvent,
+  getMockCalendarEvents,
+} from '../components/course-community/mockData';
+import { EventNotice } from '../components/course-community/EventNotice';
+
+const PUBLIC_TAB_IDS = new Set(['community', 'about']);
+
+function getAvailableTabs(isEnrolled) {
+  if (isEnrolled) return COURSE_TABS;
+  return COURSE_TABS.filter((tab) => PUBLIC_TAB_IDS.has(tab.id));
+}
+
+function sortModules(modules = []) {
+  return [...modules].sort((a, b) => a.order - b.order);
+}
 
 export function CoursePage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [expandedModules, setExpandedModules] = useState({});
-  const [currentLessonId, setCurrentLessonId] = useState(null);
+
+  const [postTitle, setPostTitle] = useState('');
+  const [postContent, setPostContent] = useState('');
+  const [postCategory, setPostCategory] = useState('GENERAL');
+  const [activeCategory, setActiveCategory] = useState('ALL');
+
+  const requestedTab = searchParams.get('tab') || 'community';
 
   const { data: course, isLoading: courseLoading } = useQuery({
-    queryKey: ['course', id],
+    queryKey: ['course-shell', id],
     queryFn: async () => {
       const { data } = await api.get(`/courses/${id}`);
       return data.course;
@@ -27,248 +59,321 @@ export function CoursePage() {
   });
 
   const { data: progress } = useQuery({
-    queryKey: ['course-progress', id],
+    queryKey: ['course-progress', id, user?.id],
     queryFn: async () => {
       try {
         const { data } = await api.get(`/courses/${id}/progress`);
         return data.enrollment;
       } catch (err) {
-        if (axios.isAxiosError(err) && err.response?.status === 404) return null;
+        if (axios.isAxiosError(err) && [401, 404].includes(err.response?.status || 0)) {
+          return null;
+        }
         throw err;
       }
     },
-    enabled: !!id,
+    enabled: !!id && !!user,
     retry: false,
+  });
+
+  const isEnrolled = Boolean(progress);
+  const availableTabs = useMemo(() => getAvailableTabs(isEnrolled), [isEnrolled]);
+  const activeTab = availableTabs.some((tab) => tab.id === requestedTab) ? requestedTab : 'community';
+
+  useEffect(() => {
+    if (requestedTab !== activeTab) {
+      const next = new URLSearchParams(searchParams);
+      next.set('tab', activeTab);
+      setSearchParams(next, { replace: true });
+    }
+  }, [activeTab, requestedTab, searchParams, setSearchParams]);
+
+  const communityId = course?.community?.id;
+
+  const { data: posts, isLoading: postsLoading } = useQuery({
+    queryKey: ['course-community-posts', communityId, activeCategory],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set('page', '1');
+      params.set('limit', '20');
+      if (activeCategory !== 'ALL') params.set('category', activeCategory);
+      const { data } = await api.get(`/posts/community/${communityId}?${params}`);
+      return data.posts;
+    },
+    enabled: !!communityId && activeTab === 'community',
+  });
+
+  const { data: members } = useQuery({
+    queryKey: ['course-community-members', communityId],
+    queryFn: async () => {
+      const { data } = await api.get(`/communities/${communityId}/members`);
+      return data.members;
+    },
+    enabled: !!communityId,
+  });
+
+  const { data: leaderboard, isLoading: leaderboardLoading } = useQuery({
+    queryKey: ['course-community-leaderboard', communityId],
+    queryFn: async () => {
+      const { data } = await api.get(`/gamification/leaderboard/${communityId}`);
+      return data.leaderboard;
+    },
+    enabled: !!communityId,
   });
 
   const enrollMutation = useMutation({
     mutationFn: () => api.post(`/courses/${id}/enroll`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['course-progress', id] });
-      toast.success('Enrolled successfully!');
+      queryClient.invalidateQueries({ queryKey: ['course-progress', id, user?.id] });
+      toast.success('You are now enrolled in this course community.');
     },
     onError: (err) => {
-      toast.error(err instanceof Error ? err.message : 'Failed to enroll');
+      toast.error(err instanceof Error ? err.message : 'Failed to enroll in course.');
     },
   });
 
-  const completeMutation = useMutation({
-    mutationFn: (lessonId) => api.post(`/lessons/${lessonId}/complete`),
+  const createPostMutation = useMutation({
+    mutationFn: (payload) => api.post('/posts', payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['course-progress', id] });
-      toast.success('Lesson marked complete');
+      queryClient.invalidateQueries({ queryKey: ['course-community-posts', communityId, activeCategory] });
+      queryClient.invalidateQueries({ queryKey: ['course-community-leaderboard', communityId] });
+      setPostTitle('');
+      setPostContent('');
+      setPostCategory('GENERAL');
+      toast.success('Post created.');
     },
     onError: (err) => {
-      toast.error(err instanceof Error ? err.message : 'Failed to mark complete');
+      toast.error(err instanceof Error ? err.message : 'Failed to create post.');
     },
   });
 
-  const isEnrolled = !!progress;
-  const completedIds = new Set(progress?.completedLessons ?? []);
-  const totalLessons = course?.modules.reduce((acc, m) => acc + m.lessons.length, 0) ?? 0;
-  const completedCount = completedIds.size;
-  const progressPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+  const likeMutation = useMutation({
+    mutationFn: (postId) => api.post(`/posts/${postId}/like`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['course-community-posts', communityId, activeCategory] });
+      queryClient.invalidateQueries({ queryKey: ['course-community-leaderboard', communityId] });
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Failed to update like.');
+    },
+  });
 
-  const firstLessonId = course?.modules[0]?.lessons[0]?.id;
+  const upcomingEvent = useMemo(
+    () => findUpcomingEvent(getMockCalendarEvents(new Date())),
+    []
+  );
 
-  if (!user) {
-    navigate('/login');
-    return null;
+  function handleTabChange(tabId) {
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', tabId);
+    setSearchParams(next);
+  }
+
+  async function handleCreatePost(e) {
+    e.preventDefault();
+    if (!isEnrolled) {
+      toast.error('Enroll in the course first.');
+      return;
+    }
+    if (!postTitle.trim() || !postContent.trim()) return;
+
+    await createPostMutation.mutateAsync({
+      communityId,
+      title: postTitle.trim(),
+      content: postContent.trim(),
+      type: 'DISCUSSION',
+      category: postCategory,
+    });
+  }
+
+  async function handleLike(postId) {
+    if (!user) {
+      toast.error('Sign in to like posts.');
+      return;
+    }
+    if (!isEnrolled) {
+      toast.error('Enroll in the course to interact.');
+      return;
+    }
+    await likeMutation.mutateAsync(postId);
+  }
+
+  function handleEnroll() {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    enrollMutation.mutate();
   }
 
   if (courseLoading || !course) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
-        <div className="animate-pulse text-gray-400">Loading course...</div>
+      <div className="min-h-[calc(100dvh-4rem)] bg-gray-100 flex items-center justify-center">
+        <div className="animate-spin w-10 h-10 border-2 border-primary-600 border-t-transparent rounded-full" />
       </div>
     );
   }
 
-  if (!isEnrolled) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        <div className="max-w-3xl mx-auto px-4 py-8">
-          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-8">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{course.title}</h1>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">{course.description || 'No description'}</p>
-            <div className="flex items-center gap-2 mb-6">
-              <Avatar src={course.creator.avatar} name={course.creator.name} size="sm" />
-              <span className="text-sm text-gray-600 dark:text-gray-400">{course.creator.name}</span>
-            </div>
-
-            <div className="mb-6">
-              <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Course content</h2>
-              <div className="space-y-2">
-                {course.modules
-                  .sort((a, b) => a.order - b.order)
-                  .map((mod) => (
-                    <div key={mod.id}>
-                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300 py-1">{mod.title}</div>
-                      <ul className="ml-4 space-y-1 text-sm text-gray-500 dark:text-gray-400">
-                        {mod.lessons
-                          .sort((a, b) => a.order - b.order)
-                          .map((l) => (
-                            <li key={l.id}>• {l.title}</li>
-                          ))}
-                      </ul>
-                    </div>
-                  ))}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-              <span className="text-lg font-semibold text-gray-900 dark:text-white">
-                {course.price === 0 ? 'Free' : `$${course.price}`}
-              </span>
-              <Button onClick={() => enrollMutation.mutate()} isLoading={enrollMutation.isPending}>
-                Enroll
-              </Button>
-            </div>
+  const renderCommunity = () => (
+    <div className="space-y-4">
+      {!isEnrolled && (
+        <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <div className="inline-flex items-center gap-2 text-sm text-gray-600 mb-3">
+            <Lock className="w-4 h-4" />
+            Enroll in this course to unlock Classroom, Calendar, Members, Map, and Leaderboards.
+          </div>
+          <div>
+            <Button onClick={handleEnroll} isLoading={enrollMutation.isPending}>
+              Enroll to unlock course community
+            </Button>
           </div>
         </div>
-      </div>
-    );
-  }
+      )}
 
-  const toggleModule = (modId) => {
-    setExpandedModules((prev) => ({ ...prev, [modId]: !prev[modId] }));
-  };
+      {isEnrolled && user && (
+        <PostComposer
+          user={user}
+          title={postTitle}
+          content={postContent}
+          category={postCategory}
+          onTitleChange={setPostTitle}
+          onContentChange={setPostContent}
+          onCategoryChange={setPostCategory}
+          onSubmit={handleCreatePost}
+          isSubmitting={createPostMutation.isPending}
+        />
+      )}
 
-  const selectLesson = (lessonId) => {
-    setCurrentLessonId(lessonId);
-  };
+      <EventNotice event={upcomingEvent} />
+      <CategoryFilters
+        categories={POST_CATEGORIES}
+        activeCategory={activeCategory}
+        onCategoryChange={setActiveCategory}
+      />
 
-  const effectiveLessonId = currentLessonId || firstLessonId;
-  const effectiveLesson = course.modules
-    .flatMap((m) => m.lessons)
-    .find((l) => l.id === effectiveLessonId);
-
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
-      <aside className="w-72 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex-shrink-0 overflow-y-auto">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="font-semibold text-gray-900 dark:text-white truncate">{course.title}</h2>
+      {postsLoading ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map((idx) => (
+            <div key={idx} className="h-36 rounded-xl border border-gray-200 bg-white animate-pulse" />
+          ))}
         </div>
-        <nav className="p-2">
-          {course.modules
-            .sort((a, b) => a.order - b.order)
-            .map((mod) => {
-              const isExpanded = expandedModules[mod.id] ?? true;
-              const lessons = [...mod.lessons].sort((a, b) => a.order - b.order);
-              return (
-                <div key={mod.id} className="mb-2">
-                  <button
-                    onClick={() => toggleModule(mod.id)}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
-                  >
-                    {isExpanded ? (
-                      <HiChevronDown className="w-4 h-4" />
-                    ) : (
-                      <HiChevronRight className="w-4 h-4" />
-                    )}
-                    {mod.title}
-                  </button>
-                  {isExpanded && (
-                    <ul className="ml-4 space-y-0.5">
-                      {lessons.map((l) => (
-                        <li key={l.id}>
-                          <button
-                            onClick={() => selectLesson(l.id)}
-                            className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm rounded-lg transition-colors ${
-                              effectiveLessonId === l.id
-                                ? 'bg-primary-50 text-primary-700'
-                                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-                            }`}
-                          >
-                            {completedIds.has(l.id) ? (
-                              <HiCheck className="w-4 h-4 text-green-600 flex-shrink-0" />
-                            ) : (
-                              <HiPlay className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                            )}
-                            <span className="truncate">{l.title}</span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              );
-            })}
-        </nav>
-      </aside>
-
-      <main className="flex-1 flex flex-col min-w-0">
-        <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-3">
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary-600 transition-all"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-            </div>
-            <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
-              {completedCount} / {totalLessons} lessons
-            </span>
-          </div>
-        </div>
-
-        <div className="flex-1 p-6 overflow-y-auto">
-          {effectiveLesson ? (
-            <div className="max-w-3xl">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{effectiveLesson.title}</h2>
-              {effectiveLesson.videoUrl && (
-                <div className="mb-6 rounded-lg overflow-hidden bg-black aspect-video">
-                  {effectiveLesson.videoUrl.includes('youtube.com') ||
-                  effectiveLesson.videoUrl.includes('youtu.be') ? (
-                    <iframe
-                      src={
-                        effectiveLesson.videoUrl.includes('youtu.be/')
-                          ? `https://www.youtube.com/embed/${effectiveLesson.videoUrl.split('/').pop()}`
-                          : effectiveLesson.videoUrl.replace('watch?v=', 'embed/')
-                      }
-                      title={effectiveLesson.title}
-                      className="w-full h-full"
-                      allowFullScreen
-                    />
-                  ) : (
-                    <video
-                      src={effectiveLesson.videoUrl}
-                      controls
-                      className="w-full h-full"
-                    />
-                  )}
-                </div>
-              )}
-              {effectiveLesson.content && (
-                <div className="prose prose-gray dark:prose-invert max-w-none mb-6 whitespace-pre-wrap text-gray-600 dark:text-gray-400">
-                  {effectiveLesson.content}
-                </div>
-              )}
-              {!effectiveLesson.content && !effectiveLesson.videoUrl && (
-                <p className="text-gray-500 dark:text-gray-400 mb-6">No content for this lesson yet.</p>
-              )}
-              <Button
-                onClick={() => completeMutation.mutate(effectiveLesson.id)}
-                disabled={completedIds.has(effectiveLesson.id)}
-                isLoading={completeMutation.isPending}
-              >
-                {completedIds.has(effectiveLesson.id) ? (
-                  <>
-                    <HiCheck className="w-4 h-4 mr-2" />
-                    Completed
-                  </>
-                ) : (
-                  'Mark Complete'
-                )}
-              </Button>
-            </div>
+      ) : (
+        <div className="space-y-3">
+          {posts?.length ? (
+            posts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                onToggleLike={handleLike}
+                likePending={likeMutation.isPending}
+              />
+            ))
           ) : (
-            <p className="text-gray-500 dark:text-gray-400">Select a lesson to start.</p>
+            <div className="bg-white border border-gray-200 rounded-xl p-10 text-center text-gray-500">
+              No posts yet. Be the first to start the discussion.
+            </div>
           )}
         </div>
-      </main>
+      )}
+    </div>
+  );
+
+  const renderClassroom = () => (
+    <div className="bg-white border border-gray-200 rounded-xl p-6">
+      <h2 className="text-2xl font-semibold text-gray-900 mb-2">Classroom</h2>
+      <p className="text-gray-600 mb-6">
+        Learn from structured modules and lessons, then come back to discuss in the community.
+      </p>
+
+      <div className="space-y-3">
+        {sortModules(course.modules).map((module, idx) => (
+          <div key={module.id} className="border border-gray-200 rounded-lg p-4">
+            <p className="text-sm text-gray-500">Module {idx + 1}</p>
+            <h3 className="text-lg font-semibold text-gray-900">{module.title}</h3>
+            <p className="text-sm text-gray-600 mt-1">{module.lessons.length} lessons</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-6">
+        {isEnrolled ? (
+          <Link to={`/course/${id}/learn`}>
+            <Button>Start Learning</Button>
+          </Link>
+        ) : (
+          <Button onClick={handleEnroll} isLoading={enrollMutation.isPending}>
+            Enroll to access lessons
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderAbout = () => (
+    <div className="bg-white border border-gray-200 rounded-xl p-6">
+      <h2 className="text-2xl font-semibold text-gray-900 mb-3">About This Course Community</h2>
+      <p className="text-gray-700 leading-7 whitespace-pre-wrap">
+        {course.community?.description || course.description || 'No description provided yet.'}
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
+        <div className="border border-gray-200 rounded-lg p-4">
+          <p className="text-sm text-gray-500">Members</p>
+          <p className="text-2xl font-semibold text-gray-900">{members?.length || course.memberCount || 0}</p>
+        </div>
+        <div className="border border-gray-200 rounded-lg p-4">
+          <p className="text-sm text-gray-500">Posts</p>
+          <p className="text-2xl font-semibold text-gray-900">{course.community?._count?.posts || 0}</p>
+        </div>
+        <div className="border border-gray-200 rounded-lg p-4">
+          <p className="text-sm text-gray-500">Courses</p>
+          <p className="text-2xl font-semibold text-gray-900">{course.community?._count?.courses || 1}</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-[calc(100dvh-4rem)] bg-gray-100">
+      <div className="sticky top-16 z-30 bg-white border-b border-gray-200">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <CourseTabs tabs={availableTabs} activeTab={activeTab} onTabChange={handleTabChange} />
+        </div>
+      </div>
+
+      {activeTab === 'calendar' && (
+        <div className="max-w-[1200px] mx-auto px-6 py-6">
+          <CalendarMonthView />
+        </div>
+      )}
+
+      {activeTab === 'map' && (
+        <div className="max-w-[1600px] mx-auto py-6">
+          <MapView members={members || []} />
+        </div>
+      )}
+
+      {activeTab !== 'calendar' && activeTab !== 'map' && (
+        <div className="max-w-[1200px] mx-auto px-6 py-6 grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
+          <div className="space-y-4">
+            {activeTab === 'community' && renderCommunity()}
+            {activeTab === 'classroom' && isEnrolled && renderClassroom()}
+            {activeTab === 'members' && isEnrolled && <MembersList members={members || []} />}
+            {activeTab === 'leaderboards' && isEnrolled && (
+              <Leaderboard entries={leaderboardLoading ? [] : leaderboard || []} />
+            )}
+            {activeTab === 'about' && renderAbout()}
+          </div>
+
+          <CommunitySidebar
+            course={course}
+            members={members || []}
+            leaderboard={leaderboard || []}
+            isEnrolled={isEnrolled}
+            onEnroll={handleEnroll}
+            isEnrolling={enrollMutation.isPending}
+            onOpenLeaderboard={() => handleTabChange('leaderboards')}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  HiPlus,
-  HiPencil,
-  HiChevronDown,
-  HiChevronRight,
-  HiCurrencyDollar,
-  HiUserGroup,
-} from 'react-icons/hi';
+  ChevronDown,
+  ChevronRight,
+  DollarSign,
+  Pencil,
+  Plus,
+  Users,
+} from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { api } from '../lib/api';
@@ -190,7 +190,7 @@ export function DashboardPage() {
               </form>
             ) : (
               <Button onClick={() => setShowCreateCommunity(true)}>
-                <HiPlus className="w-5 h-5 mr-2" />
+                <Plus className="w-5 h-5 mr-2" />
                 Create Community
               </Button>
             )}
@@ -218,7 +218,7 @@ export function DashboardPage() {
                     : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
               >
-                <HiUserGroup className="w-4 h-4" />
+                <Users className="w-4 h-4" />
                 {c.name}
                 <span className="text-gray-500 dark:text-gray-400">({c.memberCount} members)</span>
               </button>
@@ -234,7 +234,7 @@ export function DashboardPage() {
                 size="sm"
                 onClick={() => setShowAddCourse(activeCommunityId)}
               >
-                <HiPlus className="w-4 h-4 mr-1" />
+                <Plus className="w-4 h-4 mr-1" />
                 Add Course
               </Button>
             </div>
@@ -302,9 +302,9 @@ export function DashboardPage() {
                     >
                       <div className="flex items-center gap-2">
                         {isExpanded ? (
-                          <HiChevronDown className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          <ChevronDown className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                         ) : (
-                          <HiChevronRight className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          <ChevronRight className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                         )}
                         <span className="font-medium text-gray-900 dark:text-white">{course.title}</span>
                       </div>
@@ -316,12 +316,12 @@ export function DashboardPage() {
                             setShowAddModule(showAddModule === course.id ? null : course.id)
                           }
                         >
-                          <HiPlus className="w-4 h-4 mr-1" />
+                          <Plus className="w-4 h-4 mr-1" />
                           Module
                         </Button>
                         <Link to={`/course/${course.id}`}>
                           <Button size="sm" variant="ghost" type="button">
-                            <HiPencil className="w-4 h-4" />
+                            <Pencil className="w-4 h-4" />
                           </Button>
                         </Link>
                       </div>
@@ -426,7 +426,7 @@ export function DashboardPage() {
                                     variant="ghost"
                                     onClick={() => setShowAddLesson(mod.id)}
                                   >
-                                    <HiPlus className="w-4 h-4 mr-1" />
+                                    <Plus className="w-4 h-4 mr-1" />
                                     Add Lesson
                                   </Button>
                                 )}
@@ -443,7 +443,7 @@ export function DashboardPage() {
 
           <section className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
             <h2 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <HiCurrencyDollar className="w-5 h-5" />
+              <DollarSign className="w-5 h-5" />
               Earnings
             </h2>
             {earnings ? (

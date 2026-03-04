@@ -1,23 +1,34 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { param, parsePagination } from '../../lib/params.js';
+import { param, parsePagination, query } from '../../lib/params.js';
 import { requireAuth, optionalAuth } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
 import * as postService from './post.service.js';
 
 const router = Router();
+const postTypeSchema = z.enum(['DISCUSSION', 'ANNOUNCEMENT', 'POLL']);
+const postCategorySchema = z.enum([
+  'GENERAL',
+  'WINS',
+  'BRANDING_CLIENTS',
+  'WORKFLOW_PRODUCTIVITY',
+  'BANTER',
+  'INTRODUCE_YOURSELF',
+]);
 
 const createPostSchema = z.object({
   communityId: z.string().min(1),
   title: z.string().min(1),
   content: z.string().min(1),
-  type: z.enum(['DISCUSSION', 'QUESTION', 'ANNOUNCEMENT']).optional(),
+  type: postTypeSchema.optional(),
+  category: postCategorySchema.optional(),
 });
 
 const updatePostSchema = z.object({
   title: z.string().min(1).optional(),
   content: z.string().min(1).optional(),
-  type: z.enum(['DISCUSSION', 'QUESTION', 'ANNOUNCEMENT']).optional(),
+  type: postTypeSchema.optional(),
+  category: postCategorySchema.optional(),
 });
 
 const createCommentSchema = z.object({
@@ -25,9 +36,15 @@ const createCommentSchema = z.object({
   parentId: z.string().optional().nullable(),
 });
 
-router.get('/community/:communityId', async (req, res) => {
+router.get('/community/:communityId', optionalAuth, async (req, res) => {
   const pagination = parsePagination(req);
-  const result = await postService.listCommunityPosts(param(req, 'communityId'), pagination);
+  const rawCategory = query(req, 'category');
+  const category = rawCategory && postCategorySchema.safeParse(rawCategory).success ? rawCategory : null;
+  const result = await postService.listCommunityPosts(param(req, 'communityId'), {
+    ...pagination,
+    category,
+    viewerUserId: req.userId ?? null,
+  });
   res.json(result);
 });
 

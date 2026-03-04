@@ -94,6 +94,19 @@ describe('GET /community/:communityId', () => {
       expect.objectContaining({ skip: 0, take: 20 })
     );
   });
+
+  it('passes category filter when provided', async () => {
+    prisma.post.findMany.mockResolvedValue([]);
+    prisma.post.count.mockResolvedValue(0);
+
+    await request(buildApp()).get('/community/com-1?category=WINS');
+
+    expect(prisma.post.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ communityId: 'com-1', category: 'WINS' }),
+      })
+    );
+  });
 });
 
 // ── GET /:id ───────────────────────────────────────────
@@ -149,9 +162,10 @@ describe('POST /', () => {
 // ── POST /:id/like ──────────────────────────────────────
 describe('POST /:id/like', () => {
   it('adds a like when not already liked', async () => {
+    prisma.post.findUnique.mockResolvedValue(POST);
+    prisma.communityMember.findUnique.mockResolvedValue({ id: 'mem-1', role: 'MEMBER' });
     prisma.like.findUnique.mockResolvedValue(null); // not liked yet
     prisma.like.create.mockResolvedValue({});
-    prisma.post.findUnique.mockResolvedValue(POST);
 
     const res = await request(buildApp()).post('/post-1/like');
 
@@ -160,6 +174,8 @@ describe('POST /:id/like', () => {
   });
 
   it('removes a like when already liked (toggle)', async () => {
+    prisma.post.findUnique.mockResolvedValue(POST);
+    prisma.communityMember.findUnique.mockResolvedValue({ id: 'mem-1', role: 'MEMBER' });
     prisma.like.findUnique.mockResolvedValue({ id: 'like-1' });
     prisma.like.delete.mockResolvedValue({});
 
@@ -168,12 +184,22 @@ describe('POST /:id/like', () => {
     expect(res.status).toBe(200);
     expect(res.body.liked).toBe(false);
   });
+
+  it('returns 403 when user is not a member of the post community', async () => {
+    prisma.post.findUnique.mockResolvedValue(POST);
+    prisma.communityMember.findUnique.mockResolvedValue(null);
+
+    const res = await request(buildApp()).post('/post-1/like');
+
+    expect(res.status).toBe(403);
+  });
 });
 
 // ── POST /:id/comments ──────────────────────────────────
 describe('POST /:id/comments', () => {
   it('creates a comment on a post', async () => {
     prisma.post.findUnique.mockResolvedValue(POST);
+    prisma.communityMember.findUnique.mockResolvedValue({ id: 'mem-1', role: 'MEMBER' });
     prisma.comment.create.mockResolvedValue({
       id: 'com-1',
       content: 'Nice post!',
@@ -192,6 +218,7 @@ describe('POST /:id/comments', () => {
 
   it('creates a nested reply with parentId', async () => {
     prisma.post.findUnique.mockResolvedValue(POST);
+    prisma.communityMember.findUnique.mockResolvedValue({ id: 'mem-1', role: 'MEMBER' });
     prisma.comment.create.mockResolvedValue({
       id: 'rep-1',
       content: 'Thanks!',

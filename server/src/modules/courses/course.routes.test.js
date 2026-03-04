@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('./course.service.js', () => ({
+  listCourses: vi.fn(),
   listCommunityCourses: vi.fn(),
+  listEnrolledCourses: vi.fn(),
   getCourse: vi.fn(),
   createCourse: vi.fn(),
   updateCourse: vi.fn(),
@@ -66,6 +68,37 @@ describe('GET /community/:communityId', () => {
     await request(buildApp()).get('/community/com-1');
 
     expect(courseService.listCommunityCourses).toHaveBeenCalledWith('com-1');
+  });
+});
+
+describe('GET /', () => {
+  it('returns list of discoverable courses', async () => {
+    courseService.listCourses.mockResolvedValue({
+      courses: [COURSE],
+      total: 1,
+      page: 1,
+      totalPages: 1,
+    });
+
+    const res = await request(buildApp()).get('/');
+
+    expect(res.status).toBe(200);
+    expect(res.body.courses).toHaveLength(1);
+    expect(courseService.listCourses).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: 0, take: 12 })
+    );
+  });
+});
+
+describe('GET /enrolled/me', () => {
+  it('returns the logged in user enrolled courses', async () => {
+    courseService.listEnrolledCourses.mockResolvedValue([COURSE]);
+
+    const res = await request(buildApp('u1')).get('/enrolled/me');
+
+    expect(res.status).toBe(200);
+    expect(res.body.enrolledCourses).toHaveLength(1);
+    expect(courseService.listEnrolledCourses).toHaveBeenCalledWith('u1');
   });
 });
 

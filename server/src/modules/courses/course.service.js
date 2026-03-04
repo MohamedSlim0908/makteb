@@ -3,6 +3,49 @@ import { AppError } from '../../middleware/error-handler.js';
 import { USER_PUBLIC_SELECT } from '../../lib/db-selects.js';
 import { awardPoints } from '../gamification/gamification.service.js';
 
+export async function listCourses({ search, page, skip, take }) {
+  const where = { published: true };
+  if (search) {
+    where.OR = [
+      { title: { contains: search, mode: 'insensitive' } },
+      { description: { contains: search, mode: 'insensitive' } },
+      { community: { name: { contains: search, mode: 'insensitive' } } },
+    ];
+  }
+
+  const [courses, total] = await Promise.all([
+    prisma.course.findMany({
+      where,
+      skip,
+      take,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        creator: { select: USER_PUBLIC_SELECT },
+        community: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            coverImage: true,
+            _count: { select: { members: true } },
+          },
+        },
+        _count: { select: { modules: true, enrollments: true } },
+      },
+    }),
+    prisma.course.count({ where }),
+  ]);
+
+  const mapped = courses.map((course) => ({
+    ...course,
+    memberCount: course.community?._count?.members || 0,
+    enrollmentCount: course._count.enrollments,
+    moduleCount: course._count.modules,
+  }));
+
+  return { courses: mapped, total, page, totalPages: Math.ceil(total / take) };
+}
+
 export async function listCommunityCourses(communityId) {
   return prisma.course.findMany({
     where: { communityId, published: true },
@@ -14,11 +57,56 @@ export async function listCommunityCourses(communityId) {
   });
 }
 
+export async function listEnrolledCourses(userId) {
+  const enrollments = await prisma.enrollment.findMany({
+    where: { userId },
+    orderBy: { enrolledAt: 'desc' },
+    include: {
+      course: {
+        include: {
+          creator: { select: USER_PUBLIC_SELECT },
+          community: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              coverImage: true,
+              _count: { select: { members: true } },
+            },
+          },
+          _count: { select: { modules: true, enrollments: true } },
+        },
+      },
+    },
+  });
+
+  return enrollments
+    .filter((enrollment) => Boolean(enrollment.course))
+    .map((enrollment) => ({
+      ...enrollment.course,
+      memberCount: enrollment.course.community?._count?.members || 0,
+      enrollmentCount: enrollment.course._count.enrollments,
+      moduleCount: enrollment.course._count.modules,
+      enrollment: {
+        id: enrollment.id,
+        progress: enrollment.progress,
+        completedLessons: enrollment.completedLessons,
+        enrolledAt: enrollment.enrolledAt,
+      },
+    }));
+}
+
 export async function getCourse(courseId) {
   const course = await prisma.course.findUnique({
     where: { id: courseId },
     include: {
       creator: { select: USER_PUBLIC_SELECT },
+      community: {
+        include: {
+          creator: { select: USER_PUBLIC_SELECT },
+          _count: { select: { members: true, posts: true, courses: true } },
+        },
+      },
       modules: {
         orderBy: { order: 'asc' },
         include: { lessons: { orderBy: { order: 'asc' } } },
@@ -117,11 +205,41 @@ export async function enrollInCourse(userId, courseId) {
 }
 
 export async function getCourseProgress(userId, courseId) {
-  const enrollment = await prisma.enrollment.findUnique({
+  const existingEnrollment = await prisma.enrollment.findUnique({
     where: { userId_courseId: { userId, courseId } },
   });
-  if (!enrollment) throw new AppError('Not enrolled', 404);
-  return enrollment;
+  if (existingEnrollment) return existingEnrollment;
+
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    select: { id: true, communityId: true, price: true },
+  });
+  if (!course) throw new AppError('Course not found', 404);
+
+  const membership = await prisma.communityMember.findUnique({
+    where: { userId_communityId: { userId, communityId: course.communityId } },
+    select: { status: true },
+  });
+
+  if (!membership || membership.status !== 'ACTIVE') {
+    throw new AppError('Not enrolled', 404);
+  }
+
+  if (course.price && Number(course.price) > 0) {
+    const payment = await prisma.payment.findFirst({
+      where: {
+        userId,
+        type: 'COURSE',
+        referenceId: courseId,
+        status: { in: ['COMPLETED', 'SUCCEEDED'] },
+      },
+    });
+    if (!payment) throw new AppError('Payment required', 402);
+  }
+
+  return prisma.enrollment.create({
+    data: { userId, courseId },
+  });
 }
 
 export async function reorderModules(courseId, moduleIds) {

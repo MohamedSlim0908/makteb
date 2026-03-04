@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { HiHeart, HiChat } from 'react-icons/hi';
+import { Heart, MessageCircle } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Avatar } from '../components/ui/Avatar';
 import { api } from '../lib/api';
@@ -116,11 +116,11 @@ export function PostPage() {
                 post.isLiked ? 'text-red-500' : 'text-gray-500 dark:text-gray-400 hover:text-red-500'
               }`}
             >
-              <HiHeart className={`w-5 h-5 ${post.isLiked ? 'fill-current' : ''}`} />
+              <Heart className="w-5 h-5" fill={post.isLiked ? 'currentColor' : 'none'} />
               {post.likeCount}
             </button>
             <span className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-              <HiChat className="w-5 h-5" />
+              <MessageCircle className="w-5 h-5" />
               {post.commentCount} comments
             </span>
           </div>

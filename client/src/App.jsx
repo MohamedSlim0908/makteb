@@ -11,6 +11,7 @@ import { DiscoverPage } from './pages/DiscoverPage';
 import { CommunityPage } from './pages/CommunityPage';
 import { PostPage } from './pages/PostPage';
 import { CoursePage } from './pages/CoursePage';
+import { CourseLearnPage } from './pages/CourseLearnPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SettingsPage } from './pages/SettingsPage';
 
@@ -30,11 +31,13 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route element={<AppLayout />}>
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={<DiscoverPage />} />
             <Route path="/discover" element={<DiscoverPage />} />
+            <Route path="/landing" element={<LandingPage />} />
             <Route path="/community/:slug" element={<CommunityPage />} />
             <Route path="/post/:id" element={<PostPage />} />
             <Route path="/course/:id" element={<CoursePage />} />
+            <Route path="/course/:id/learn" element={<CourseLearnPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
@@ -46,7 +49,7 @@ export default function App() {
       <Toaster
         position="top-right"
         toastOptions={{
-          className: 'dark:bg-gray-800 dark:text-white dark:border-gray-700',
+          className: 'bg-white text-gray-900 border border-gray-200',
         }}
       />
     </QueryClientProvider>

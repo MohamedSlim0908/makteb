@@ -115,6 +115,25 @@ export async function joinCommunity(userId, communityId) {
   }
 
   await prisma.communityMember.create({ data: { userId, communityId } });
+
+  const publishedFreeCourses = await prisma.course.findMany({
+    where: {
+      communityId,
+      published: true,
+      OR: [{ price: null }, { price: { lte: 0 } }],
+    },
+    select: { id: true },
+  });
+
+  if (publishedFreeCourses.length) {
+    await prisma.enrollment.createMany({
+      data: publishedFreeCourses.map((course) => ({
+        userId,
+        courseId: course.id,
+      })),
+      skipDuplicates: true,
+    });
+  }
 }
 
 export async function leaveCommunity(userId, communityId) {

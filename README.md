@@ -20,6 +20,7 @@ A Skool-style community + courses + gamification platform built for Tunisia and 
 
 ```bash
 docker compose up -d
+docker compose up -d
 ```
 
 This starts PostgreSQL on port 5432 and Redis on port 6379.

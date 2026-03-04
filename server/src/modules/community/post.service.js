@@ -4,24 +4,38 @@ import { AppError } from '../../middleware/error-handler.js';
 import { USER_PUBLIC_SELECT, MODERATOR_ROLES } from '../../lib/db-selects.js';
 import { awardPoints } from '../gamification/gamification.service.js';
 
-export async function listCommunityPosts(communityId, { skip, take, page }) {
+export async function listCommunityPosts(communityId, { skip, take, page, category, viewerUserId }) {
+  const where = { communityId };
+  if (category && category !== 'ALL') {
+    where.category = category;
+  }
+
   const [posts, total] = await Promise.all([
     prisma.post.findMany({
-      where: { communityId },
+      where,
       skip,
       take,
       orderBy: [{ pinned: 'desc' }, { createdAt: 'desc' }],
       include: {
         author: { select: USER_PUBLIC_SELECT },
         _count: { select: { comments: true, likes: true } },
+        ...(viewerUserId
+          ? {
+              likes: {
+                where: { userId: viewerUserId },
+                select: { id: true },
+              },
+            }
+          : {}),
       },
     }),
-    prisma.post.count({ where: { communityId } }),
+    prisma.post.count({ where }),
   ]);
-  const mapped = posts.map(({ _count, ...rest }) => ({
+  const mapped = posts.map(({ _count, likes, ...rest }) => ({
     ...rest,
     likeCount: _count.likes,
     commentCount: _count.comments,
+    isLiked: Array.isArray(likes) ? likes.length > 0 : false,
   }));
   return { posts: mapped, total, page, totalPages: Math.ceil(total / take) };
 }
@@ -62,14 +76,21 @@ export async function getPost(postId, viewerUserId = null) {
   };
 }
 
-export async function createPost(authorId, { communityId, title, content, type }) {
+export async function createPost(authorId, { communityId, title, content, type, category }) {
   const membership = await prisma.communityMember.findUnique({
     where: { userId_communityId: { userId: authorId, communityId } },
   });
   if (!membership) throw new AppError('Must be a member to post', 403);
 
   const post = await prisma.post.create({
-    data: { communityId, authorId, title, content, type: type || 'DISCUSSION' },
+    data: {
+      communityId,
+      authorId,
+      title,
+      content,
+      type: type || 'DISCUSSION',
+      category: category || 'GENERAL',
+    },
     include: {
       author: { select: USER_PUBLIC_SELECT },
       _count: { select: { comments: true, likes: true } },
@@ -86,10 +107,10 @@ export async function updatePost(authorId, postId, data) {
   const post = await prisma.post.findUnique({ where: { id: postId } });
   if (!post || post.authorId !== authorId) throw new AppError('Not authorized', 403);
 
-  const { title, content, type } = data;
+  const { title, content, type, category } = data;
   return prisma.post.update({
     where: { id: postId },
-    data: { title, content, type },
+    data: { title, content, type, category },
     include: {
       author: { select: USER_PUBLIC_SELECT },
       _count: { select: { comments: true, likes: true } },
@@ -129,6 +150,14 @@ export async function togglePin(actorId, postId) {
 }
 
 export async function toggleLike(userId, postId) {
+  const post = await prisma.post.findUnique({ where: { id: postId } });
+  if (!post) throw new AppError('Post not found', 404);
+
+  const membership = await prisma.communityMember.findUnique({
+    where: { userId_communityId: { userId, communityId: post.communityId } },
+  });
+  if (!membership) throw new AppError('Must be a member to like posts', 403);
+
   const existingLike = await prisma.like.findUnique({
     where: { postId_userId: { postId, userId } },
   });
@@ -139,8 +168,7 @@ export async function toggleLike(userId, postId) {
   }
 
   await prisma.like.create({ data: { postId, userId } });
-  const post = await prisma.post.findUnique({ where: { id: postId } });
-  if (post) await awardPoints(userId, post.communityId, 1, 'Liked a post');
+  await awardPoints(userId, post.communityId, 1, 'Liked a post');
   return { liked: true };
 }
 
@@ -154,6 +182,11 @@ export async function checkLiked(userId, postId) {
 export async function addComment(authorId, postId, { content, parentId }) {
   const post = await prisma.post.findUnique({ where: { id: postId } });
   if (!post) throw new AppError('Post not found', 404);
+
+  const membership = await prisma.communityMember.findUnique({
+    where: { userId_communityId: { userId: authorId, communityId: post.communityId } },
+  });
+  if (!membership) throw new AppError('Must be a member to comment', 403);
 
   const comment = await prisma.comment.create({
     data: { postId, authorId, content, parentId: parentId || null },
