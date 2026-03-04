@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { useTheme } from '../../lib/theme';
+import { useTheme } from '../../lib/theme.jsx';
 import { Avatar } from '../ui/Avatar';
 import { Button } from '../ui/Button';
 import { useState } from 'react';
