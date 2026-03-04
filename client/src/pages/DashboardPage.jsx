@@ -130,11 +130,11 @@ export function DashboardPage() {
 
   if (!hasCommunities) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         <div className="max-w-xl mx-auto px-4 py-16">
-          <div className="bg-white rounded-xl border border-gray-200 p-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Create your first community</h1>
-            <p className="text-gray-600 mb-6">
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-8">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Create your first community</h1>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               Communities let you organize courses and connect with learners. Create one to get started.
             </p>
 
@@ -160,13 +160,13 @@ export function DashboardPage() {
                   placeholder="A brief description..."
                 />
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Visibility</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Visibility</label>
                   <select
                     value={communityForm.visibility}
                     onChange={(e) =>
                       setCommunityForm((f) => ({ ...f, visibility: e.target.value }))
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   >
                     {VISIBILITY_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>
@@ -201,12 +201,12 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <div className="max-w-5xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Creator Dashboard</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Creator Dashboard</h1>
 
         <div className="mb-8">
-          <h2 className="font-semibold text-gray-900 mb-3">Your Communities</h2>
+          <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Your Communities</h2>
           <div className="flex flex-wrap gap-2">
             {myCommunities.map((c) => (
               <button
@@ -215,21 +215,21 @@ export function DashboardPage() {
                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
                   activeCommunityId === c.id
                     ? 'bg-primary-50 border-primary-200 text-primary-700'
-                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                    : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
               >
                 <HiUserGroup className="w-4 h-4" />
                 {c.name}
-                <span className="text-gray-500">({c.memberCount} members)</span>
+                <span className="text-gray-500 dark:text-gray-400">({c.memberCount} members)</span>
               </button>
             ))}
           </div>
         </div>
 
         <div className="space-y-8">
-          <section className="bg-white rounded-xl border border-gray-200 p-6">
+          <section className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-gray-900">Courses</h2>
+              <h2 className="font-semibold text-gray-900 dark:text-white">Courses</h2>
               <Button
                 size="sm"
                 onClick={() => setShowAddCourse(activeCommunityId)}
@@ -245,7 +245,7 @@ export function DashboardPage() {
                   e.preventDefault();
                   createCourseMutation.mutate(courseForm);
                 }}
-                className="mb-6 p-4 bg-gray-50 rounded-lg space-y-3"
+                className="mb-6 p-4 bg-gray-50 dark:bg-gray-950 rounded-lg space-y-3"
               >
                 <Input
                   label="Course title"
@@ -292,21 +292,21 @@ export function DashboardPage() {
                 return (
                   <div
                     key={course.id}
-                    className="border border-gray-200 rounded-lg overflow-hidden"
+                    className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
                   >
                     <div
-                      className="flex items-center justify-between p-4 bg-gray-50 cursor-pointer"
+                      className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-950 cursor-pointer"
                       onClick={() =>
                         setExpandedCourses((prev) => ({ ...prev, [course.id]: !prev[course.id] }))
                       }
                     >
                       <div className="flex items-center gap-2">
                         {isExpanded ? (
-                          <HiChevronDown className="w-5 h-5 text-gray-500" />
+                          <HiChevronDown className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                         ) : (
-                          <HiChevronRight className="w-5 h-5 text-gray-500" />
+                          <HiChevronRight className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                         )}
-                        <span className="font-medium text-gray-900">{course.title}</span>
+                        <span className="font-medium text-gray-900 dark:text-white">{course.title}</span>
                       </div>
                       <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                         <Button
@@ -338,7 +338,7 @@ export function DashboardPage() {
                             });
                           }
                         }}
-                        className="p-4 border-t border-gray-200 bg-white flex gap-2"
+                        className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex gap-2"
                       >
                         <Input
                           placeholder="Module title"
@@ -361,18 +361,18 @@ export function DashboardPage() {
                     )}
 
                     {isExpanded && (
-                      <div className="p-4 border-t border-gray-200 space-y-3">
+                      <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
                         {modules.length === 0 ? (
-                          <p className="text-sm text-gray-500">No modules yet. Add one above.</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">No modules yet. Add one above.</p>
                         ) : (
                           modules
                             .sort((a, b) => a.order - b.order)
                             .map((mod) => (
                               <div
                                 key={mod.id}
-                                className="pl-4 border-l-2 border-gray-200"
+                                className="pl-4 border-l-2 border-gray-200 dark:border-gray-700"
                               >
-                                <div className="font-medium text-gray-700 mb-2">{mod.title}</div>
+                                <div className="font-medium text-gray-700 dark:text-gray-300 mb-2">{mod.title}</div>
                                 {showAddLesson === mod.id ? (
                                   <form
                                     onSubmit={(e) => {
@@ -441,23 +441,23 @@ export function DashboardPage() {
             </div>
           </section>
 
-          <section className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <section className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <h2 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <HiCurrencyDollar className="w-5 h-5" />
               Earnings
             </h2>
             {earnings ? (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <div className="text-sm text-gray-600">Total</div>
-                    <div className="text-xl font-bold text-gray-900">
+                  <div className="p-4 bg-gray-50 dark:bg-gray-950 rounded-lg">
+                    <div className="text-sm text-gray-600 dark:text-gray-400">Total</div>
+                    <div className="text-xl font-bold text-gray-900 dark:text-white">
                       ${(earnings.totalEarnings / 100).toFixed(2)}
                     </div>
                   </div>
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <div className="text-sm text-gray-600">Fees (10%)</div>
-                    <div className="text-xl font-bold text-gray-900">
+                  <div className="p-4 bg-gray-50 dark:bg-gray-950 rounded-lg">
+                    <div className="text-sm text-gray-600 dark:text-gray-400">Fees (10%)</div>
+                    <div className="text-xl font-bold text-gray-900 dark:text-white">
                       ${(earnings.totalFees / 100).toFixed(2)}
                     </div>
                   </div>
@@ -469,39 +469,39 @@ export function DashboardPage() {
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-gray-700 mb-2">Recent payments</h3>
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Recent payments</h3>
                   {earnings.payments?.length ? (
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="border-b border-gray-200">
-                            <th className="text-left py-2">Date</th>
-                            <th className="text-left py-2">Amount</th>
-                            <th className="text-left py-2">Fee</th>
-                            <th className="text-left py-2">Net</th>
+                          <tr className="border-b border-gray-200 dark:border-gray-700">
+                            <th className="text-left py-2 text-gray-900 dark:text-white">Date</th>
+                            <th className="text-left py-2 text-gray-900 dark:text-white">Amount</th>
+                            <th className="text-left py-2 text-gray-900 dark:text-white">Fee</th>
+                            <th className="text-left py-2 text-gray-900 dark:text-white">Net</th>
                           </tr>
                         </thead>
                         <tbody>
                           {earnings.payments.map((p) => (
-                            <tr key={p.id} className="border-b border-gray-100">
-                              <td className="py-2 text-gray-600">
+                            <tr key={p.id} className="border-b border-gray-100 dark:border-gray-800">
+                              <td className="py-2 text-gray-600 dark:text-gray-400">
                                 {new Date(p.createdAt).toLocaleDateString()}
                               </td>
-                              <td className="py-2">${(p.amount / 100).toFixed(2)}</td>
-                              <td className="py-2 text-gray-600">${(p.fee / 100).toFixed(2)}</td>
-                              <td className="py-2 font-medium">${(p.netAmount / 100).toFixed(2)}</td>
+                              <td className="py-2 text-gray-900 dark:text-white">${(p.amount / 100).toFixed(2)}</td>
+                              <td className="py-2 text-gray-600 dark:text-gray-400">${(p.fee / 100).toFixed(2)}</td>
+                              <td className="py-2 font-medium text-gray-900 dark:text-white">${(p.netAmount / 100).toFixed(2)}</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
                   ) : (
-                    <p className="text-gray-500 text-sm">No payments yet.</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">No payments yet.</p>
                   )}
                 </div>
               </>
             ) : (
-              <p className="text-gray-500">Loading earnings...</p>
+              <p className="text-gray-500 dark:text-gray-400">Loading earnings...</p>
             )}
           </section>
         </div>

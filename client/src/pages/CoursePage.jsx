@@ -79,7 +79,7 @@ export function CoursePage() {
 
   if (courseLoading || !course) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
         <div className="animate-pulse text-gray-400">Loading course...</div>
       </div>
     );
@@ -87,25 +87,25 @@ export function CoursePage() {
 
   if (!isEnrolled) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         <div className="max-w-3xl mx-auto px-4 py-8">
-          <div className="bg-white rounded-xl border border-gray-200 p-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">{course.title}</h1>
-            <p className="text-gray-600 mb-6">{course.description || 'No description'}</p>
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-8">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{course.title}</h1>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">{course.description || 'No description'}</p>
             <div className="flex items-center gap-2 mb-6">
               <Avatar src={course.creator.avatar} name={course.creator.name} size="sm" />
-              <span className="text-sm text-gray-600">{course.creator.name}</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">{course.creator.name}</span>
             </div>
 
             <div className="mb-6">
-              <h2 className="font-semibold text-gray-900 mb-3">Course content</h2>
+              <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Course content</h2>
               <div className="space-y-2">
                 {course.modules
                   .sort((a, b) => a.order - b.order)
                   .map((mod) => (
                     <div key={mod.id}>
-                      <div className="text-sm font-medium text-gray-700 py-1">{mod.title}</div>
-                      <ul className="ml-4 space-y-1 text-sm text-gray-500">
+                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300 py-1">{mod.title}</div>
+                      <ul className="ml-4 space-y-1 text-sm text-gray-500 dark:text-gray-400">
                         {mod.lessons
                           .sort((a, b) => a.order - b.order)
                           .map((l) => (
@@ -117,8 +117,8 @@ export function CoursePage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-              <span className="text-lg font-semibold text-gray-900">
+            <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+              <span className="text-lg font-semibold text-gray-900 dark:text-white">
                 {course.price === 0 ? 'Free' : `$${course.price}`}
               </span>
               <Button onClick={() => enrollMutation.mutate()} isLoading={enrollMutation.isPending}>
@@ -145,10 +145,10 @@ export function CoursePage() {
     .find((l) => l.id === effectiveLessonId);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <aside className="w-72 bg-white border-r border-gray-200 flex-shrink-0 overflow-y-auto">
-        <div className="p-4 border-b border-gray-200">
-          <h2 className="font-semibold text-gray-900 truncate">{course.title}</h2>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
+      <aside className="w-72 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex-shrink-0 overflow-y-auto">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="font-semibold text-gray-900 dark:text-white truncate">{course.title}</h2>
         </div>
         <nav className="p-2">
           {course.modules
@@ -160,7 +160,7 @@ export function CoursePage() {
                 <div key={mod.id} className="mb-2">
                   <button
                     onClick={() => toggleModule(mod.id)}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
                   >
                     {isExpanded ? (
                       <HiChevronDown className="w-4 h-4" />
@@ -178,7 +178,7 @@ export function CoursePage() {
                             className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm rounded-lg transition-colors ${
                               effectiveLessonId === l.id
                                 ? 'bg-primary-50 text-primary-700'
-                                : 'text-gray-600 hover:bg-gray-50'
+                                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                             }`}
                           >
                             {completedIds.has(l.id) ? (
@@ -199,17 +199,17 @@ export function CoursePage() {
       </aside>
 
       <main className="flex-1 flex flex-col min-w-0">
-        <div className="bg-white border-b border-gray-200 px-6 py-3">
+        <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-3">
           <div className="flex items-center gap-4">
             <div className="flex-1">
-              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-primary-600 transition-all"
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
             </div>
-            <span className="text-sm text-gray-600 whitespace-nowrap">
+            <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
               {completedCount} / {totalLessons} lessons
             </span>
           </div>
@@ -218,7 +218,7 @@ export function CoursePage() {
         <div className="flex-1 p-6 overflow-y-auto">
           {effectiveLesson ? (
             <div className="max-w-3xl">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">{effectiveLesson.title}</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{effectiveLesson.title}</h2>
               {effectiveLesson.videoUrl && (
                 <div className="mb-6 rounded-lg overflow-hidden bg-black aspect-video">
                   {effectiveLesson.videoUrl.includes('youtube.com') ||
@@ -243,12 +243,12 @@ export function CoursePage() {
                 </div>
               )}
               {effectiveLesson.content && (
-                <div className="prose prose-gray max-w-none mb-6 whitespace-pre-wrap">
+                <div className="prose prose-gray dark:prose-invert max-w-none mb-6 whitespace-pre-wrap text-gray-600 dark:text-gray-400">
                   {effectiveLesson.content}
                 </div>
               )}
               {!effectiveLesson.content && !effectiveLesson.videoUrl && (
-                <p className="text-gray-500 mb-6">No content for this lesson yet.</p>
+                <p className="text-gray-500 dark:text-gray-400 mb-6">No content for this lesson yet.</p>
               )}
               <Button
                 onClick={() => completeMutation.mutate(effectiveLesson.id)}
@@ -266,7 +266,7 @@ export function CoursePage() {
               </Button>
             </div>
           ) : (
-            <p className="text-gray-500">Select a lesson to start.</p>
+            <p className="text-gray-500 dark:text-gray-400">Select a lesson to start.</p>
           )}
         </div>
       </main>

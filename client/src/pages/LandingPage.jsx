@@ -34,12 +34,12 @@ export function LandingPage() {
       </section>
 
       {/* Features */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-white dark:bg-gray-900">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-gray-900 text-center mb-4">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white text-center mb-4">
             Everything you need to succeed
           </h2>
-          <p className="text-gray-600 text-center max-w-2xl mx-auto mb-16">
+          <p className="text-gray-600 dark:text-gray-400 text-center max-w-2xl mx-auto mb-16">
             Makteb brings together the tools that creators need to build, engage, and monetize their communities.
           </p>
           <div className="grid md:grid-cols-3 gap-12">
@@ -47,8 +47,8 @@ export function LandingPage() {
               <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary-100 text-primary-600 mb-4">
                 <HiUserGroup className="w-7 h-7" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Vibrant Communities</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Vibrant Communities</h3>
+              <p className="text-gray-600 dark:text-gray-400">
                 Create spaces where your audience connects, shares, and grows together. Foster meaningful engagement with discussions, events, and member-only content.
               </p>
             </div>
@@ -56,8 +56,8 @@ export function LandingPage() {
               <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary-100 text-primary-600 mb-4">
                 <HiAcademicCap className="w-7 h-7" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Structured Courses</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Structured Courses</h3>
+              <p className="text-gray-600 dark:text-gray-400">
                 Deliver your expertise through well-organized courses. Add lessons, quizzes, and progress tracking to help your students learn effectively.
               </p>
             </div>
@@ -65,8 +65,8 @@ export function LandingPage() {
               <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary-100 text-primary-600 mb-4">
                 <HiStar className="w-7 h-7" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Gamification</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Gamification</h3>
+              <p className="text-gray-600 dark:text-gray-400">
                 Keep your community motivated with badges, points, and leaderboards. Turn learning and participation into an engaging, rewarding experience.
               </p>
             </div>
@@ -75,39 +75,39 @@ export function LandingPage() {
       </section>
 
       {/* How it works */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-gray-50 dark:bg-gray-950">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-gray-900 text-center mb-4">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white text-center mb-4">
             How it works
           </h2>
-          <p className="text-gray-600 text-center max-w-2xl mx-auto mb-16">
+          <p className="text-gray-600 dark:text-gray-400 text-center max-w-2xl mx-auto mb-16">
             Get started in three simple steps.
           </p>
           <div className="grid md:grid-cols-3 gap-8">
             <div className="relative">
               <div className="flex items-center gap-4">
                 <span className="flex-shrink-0 w-10 h-10 rounded-full bg-primary-600 text-white font-bold flex items-center justify-center">1</span>
-                <h3 className="text-lg font-semibold text-gray-900">Create your account</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Create your account</h3>
               </div>
-              <p className="mt-3 ml-14 text-gray-600">
+              <p className="mt-3 ml-14 text-gray-600 dark:text-gray-400">
                 Sign up in seconds. Connect with Google or Facebook for a quick start.
               </p>
             </div>
             <div className="relative">
               <div className="flex items-center gap-4">
                 <span className="flex-shrink-0 w-10 h-10 rounded-full bg-primary-600 text-white font-bold flex items-center justify-center">2</span>
-                <h3 className="text-lg font-semibold text-gray-900">Build your community</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Build your community</h3>
               </div>
-              <p className="mt-3 ml-14 text-gray-600">
+              <p className="mt-3 ml-14 text-gray-600 dark:text-gray-400">
                 Set up your space, invite members, and start sharing your content.
               </p>
             </div>
             <div className="relative">
               <div className="flex items-center gap-4">
                 <span className="flex-shrink-0 w-10 h-10 rounded-full bg-primary-600 text-white font-bold flex items-center justify-center">3</span>
-                <h3 className="text-lg font-semibold text-gray-900">Grow and thrive</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Grow and thrive</h3>
               </div>
-              <p className="mt-3 ml-14 text-gray-600">
+              <p className="mt-3 ml-14 text-gray-600 dark:text-gray-400">
                 Engage your audience with courses, discussions, and gamification.
               </p>
             </div>

@@ -77,7 +77,7 @@ export function PostPage() {
 
   if (isLoading || !post) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
         <div className="animate-spin w-10 h-10 border-2 border-primary-600 border-t-transparent rounded-full" />
       </div>
     );
@@ -95,31 +95,31 @@ export function PostPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <div className="max-w-3xl mx-auto px-4 py-8">
-        <article className="bg-white rounded-xl border border-gray-200 p-6 md:p-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{post.title}</h1>
+        <article className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6 md:p-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">{post.title}</h1>
           <div className="flex items-center gap-3 mt-4">
             <Avatar src={post.author.avatar} name={post.author.name} size="md" />
             <div>
-              <span className="font-medium text-gray-900">{post.author.name}</span>
-              <span className="text-gray-500 text-sm ml-2">{formatDate(post.createdAt)}</span>
+              <span className="font-medium text-gray-900 dark:text-white">{post.author.name}</span>
+              <span className="text-gray-500 dark:text-gray-400 text-sm ml-2">{formatDate(post.createdAt)}</span>
             </div>
           </div>
           <div className="mt-6">
-            <p className="text-gray-600 whitespace-pre-wrap">{post.content}</p>
+            <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{post.content}</p>
           </div>
-          <div className="flex gap-6 mt-6 pt-6 border-t border-gray-200">
+          <div className="flex gap-6 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
             <button
               onClick={toggleLike}
               className={`flex items-center gap-2 text-sm font-medium transition-colors ${
-                post.isLiked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'
+                post.isLiked ? 'text-red-500' : 'text-gray-500 dark:text-gray-400 hover:text-red-500'
               }`}
             >
               <HiHeart className={`w-5 h-5 ${post.isLiked ? 'fill-current' : ''}`} />
               {post.likeCount}
             </button>
-            <span className="flex items-center gap-2 text-sm text-gray-500">
+            <span className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
               <HiChat className="w-5 h-5" />
               {post.commentCount} comments
             </span>
@@ -128,7 +128,7 @@ export function PostPage() {
 
         {/* Comments section */}
         <section className="mt-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Comments</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Comments</h2>
 
           {user && (
             <form onSubmit={handleSubmitComment} className="mb-8">
@@ -137,7 +137,7 @@ export function PostPage() {
                 onChange={(e) => setCommentContent(e.target.value)}
                 placeholder="Add a comment..."
                 rows={3}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
               />
               <Button
                 type="submit"
@@ -152,21 +152,21 @@ export function PostPage() {
           )}
 
           {!user && (
-            <p className="text-gray-500 text-sm mb-6">Sign in to comment.</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Sign in to comment.</p>
           )}
 
           <div className="space-y-6">
             {post.comments?.length ? (
               post.comments.map((comment) => (
-                <div key={comment.id} className="border-l-2 border-gray-200 pl-4">
+                <div key={comment.id} className="border-l-2 border-gray-200 dark:border-gray-700 pl-4">
                   <div className="flex gap-3">
                     <Avatar src={comment.author.avatar} name={comment.author.name} size="sm" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-gray-900">{comment.author.name}</span>
-                        <span className="text-gray-500 text-sm">{formatDate(comment.createdAt)}</span>
+                        <span className="font-medium text-gray-900 dark:text-white">{comment.author.name}</span>
+                        <span className="text-gray-500 dark:text-gray-400 text-sm">{formatDate(comment.createdAt)}</span>
                       </div>
-                      <p className="text-gray-600 text-sm mt-1">{comment.content}</p>
+                      <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">{comment.content}</p>
                       {user && (
                         <button
                           onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
@@ -185,7 +185,7 @@ export function PostPage() {
                             onChange={(e) => setReplyContent(e.target.value)}
                             placeholder="Write a reply..."
                             rows={2}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
                           />
                           <div className="flex gap-2 mt-2">
                             <Button type="submit" size="sm" disabled={!replyContent.trim()} isLoading={addReplyMutation.isPending}>
@@ -204,10 +204,10 @@ export function PostPage() {
                               <Avatar src={reply.author.avatar} name={reply.author.name} size="sm" />
                               <div>
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-medium text-gray-900 text-sm">{reply.author.name}</span>
-                                  <span className="text-gray-500 text-xs">{formatDate(reply.createdAt)}</span>
+                                  <span className="font-medium text-gray-900 dark:text-white text-sm">{reply.author.name}</span>
+                                  <span className="text-gray-500 dark:text-gray-400 text-xs">{formatDate(reply.createdAt)}</span>
                                 </div>
-                                <p className="text-gray-600 text-sm mt-0.5">{reply.content}</p>
+                                <p className="text-gray-600 dark:text-gray-400 text-sm mt-0.5">{reply.content}</p>
                               </div>
                             </div>
                           ))}
@@ -218,7 +218,7 @@ export function PostPage() {
                 </div>
               ))
             ) : (
-              <p className="text-gray-500 text-sm py-4">No comments yet. Be the first!</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm py-4">No comments yet. Be the first!</p>
             )}
           </div>
         </section>

@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Class-based dark mode (Tailwind v4) */
+@variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-primary-50: #eff6ff;
   --color-primary-100: #dbeafe;
@@ -14,14 +17,49 @@
   --color-primary-950: #172554;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  @apply bg-white text-gray-900 transition-colors duration-300;
+}
+
+.dark body {
+  @apply bg-gray-900 text-gray-100;
 }
 
 #root {
   min-height: 100vh;
+}
+
+/* ── Utilities from fluid-main ── */
+.focus-ring {
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+}
+
+.dark .focus-ring {
+  @apply focus-visible:ring-offset-gray-900;
+}
+
+.button-preset {
+  @apply transition-all active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+.clickable {
+  @apply rounded-lg border border-transparent transition-colors hover:border-gray-200 hover:bg-gray-50;
+}
+
+.dark .clickable {
+  @apply hover:border-gray-700 hover:bg-gray-800;
+}
+
+/* Smooth theme transition — disable briefly on toggle */
+.theme-transitioning * {
+  transition: none !important;
 }

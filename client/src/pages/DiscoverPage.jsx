@@ -45,11 +45,11 @@ export function DiscoverPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       <div className="max-w-6xl mx-auto px-4 py-12">
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Discover communities</h1>
-          <p className="text-gray-500">or <button onClick={() => user ? navigate('/dashboard') : navigate('/login')} className="text-primary-600 hover:underline">create your own</button></p>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">Discover communities</h1>
+          <p className="text-gray-500 dark:text-gray-400">or <button onClick={() => user ? navigate('/dashboard') : navigate('/login')} className="text-primary-600 hover:underline">create your own</button></p>
         </div>
 
         <div className="max-w-2xl mx-auto mb-8">
@@ -60,7 +60,7 @@ export function DiscoverPage() {
               placeholder="Search for anything"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-gray-900 placeholder-gray-400"
+              className="w-full pl-12 pr-4 py-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm dark:shadow-gray-900/30 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-gray-900 dark:text-white placeholder-gray-400"
             />
           </form>
         </div>
@@ -71,8 +71,8 @@ export function DiscoverPage() {
               key={cat.id}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                 cat.id === 'all'
-                  ? 'bg-gray-900 text-white'
-                  : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
+                  : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
               }`}
             >
               {cat.icon && <span className="mr-2">{cat.icon}</span>}
@@ -84,7 +84,7 @@ export function DiscoverPage() {
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-200 overflow-hidden animate-pulse h-80" />
+              <div key={i} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden animate-pulse h-80" />
             ))}
           </div>
         ) : (
@@ -94,9 +94,9 @@ export function DiscoverPage() {
                 <Link
                   key={community.id}
                   to={`/community/${community.slug}`}
-                  className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all group flex flex-col h-full"
+                  className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all group flex flex-col h-full"
                 >
-                  <div className="h-32 relative overflow-hidden bg-gray-100">
+                  <div className="h-32 relative overflow-hidden bg-gray-100 dark:bg-gray-800">
                     {community.coverImage ? (
                       <img
                         src={community.coverImage}
@@ -109,23 +109,22 @@ export function DiscoverPage() {
                   </div>
                   
                   <div className="px-5 pb-5 flex-1 flex flex-col relative">
-                    <div className="w-16 h-16 rounded-xl border-4 border-white shadow-sm bg-white -mt-8 mb-3 overflow-hidden flex items-center justify-center">
-                       {/* Logo logic */}
+                    <div className="w-16 h-16 rounded-xl border-4 border-white dark:border-gray-900 shadow-sm dark:shadow-gray-900/30 bg-white dark:bg-gray-800 -mt-8 mb-3 overflow-hidden flex items-center justify-center">
                        <div className="w-full h-full bg-black text-white flex items-center justify-center font-bold text-xl">
                          {community.name.charAt(0)}
                        </div>
                     </div>
 
-                    <h3 className="font-bold text-gray-900 text-lg mb-1 group-hover:text-primary-600 transition-colors">
+                    <h3 className="font-bold text-gray-900 dark:text-white text-lg mb-1 group-hover:text-primary-600 transition-colors">
                       {community.name}
                     </h3>
                     
-                    <p className="text-sm text-gray-500 line-clamp-3 mb-4 flex-1">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-3 mb-4 flex-1">
                       {community.description || 'No description available for this community.'}
                     </p>
                     
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
-                      <div className="flex items-center gap-4 text-xs font-medium text-gray-500">
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-800 mt-auto">
+                      <div className="flex items-center gap-4 text-xs font-medium text-gray-500 dark:text-gray-400">
                         {community.visibility === 'PRIVATE' ? (
                           <span className="flex items-center gap-1"><HiLockClosed className="w-3 h-3" /> Private</span>
                         ) : (
@@ -133,7 +132,7 @@ export function DiscoverPage() {
                         )}
                         <span>{community.memberCount} members</span>
                       </div>
-                      <div className="text-sm font-bold text-gray-900">
+                      <div className="text-sm font-bold text-gray-900 dark:text-white">
                         {community.price && Number(community.price) > 0 ? `$${community.price}/mo` : 'Free'}
                       </div>
                     </div>
@@ -151,7 +150,7 @@ export function DiscoverPage() {
                 >
                   Previous
                 </Button>
-                <span className="text-sm text-gray-600 px-4">
+                <span className="text-sm text-gray-600 dark:text-gray-400 px-4">
                   Page {page} of {data.totalPages}
                 </span>
                 <Button
