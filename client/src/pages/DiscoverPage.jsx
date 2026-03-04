@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { HiSearch, HiPlus } from 'react-icons/hi';
+import { HiSearch, HiPlus, HiLockClosed, HiGlobeAlt } from 'react-icons/hi';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Avatar } from '../components/ui/Avatar';
@@ -33,47 +33,58 @@ export function DiscoverPage() {
     setPage(1);
   }
 
+  const categories = [
+    { id: 'all', label: 'All', icon: null },
+    { id: 'hobbies', label: 'Hobbies', icon: '🎨' },
+    { id: 'music', label: 'Music', icon: '🎸' },
+    { id: 'money', label: 'Money', icon: '💰' },
+    { id: 'spirituality', label: 'Spirituality', icon: '🧘' },
+    { id: 'tech', label: 'Tech', icon: '💻' },
+    { id: 'health', label: 'Health', icon: '🥕' },
+    { id: 'sports', label: 'Sports', icon: '⚽' },
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Discover Communities</h1>
-          {user && (
-            <Button onClick={() => navigate('/dashboard')} className="inline-flex items-center gap-2">
-              <HiPlus className="w-5 h-5" />
-              Create Community
-            </Button>
-          )}
+    <div className="min-h-screen bg-white">
+      <div className="max-w-6xl mx-auto px-4 py-12">
+        <div className="text-center mb-10">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Discover communities</h1>
+          <p className="text-gray-500">or <button onClick={() => user ? navigate('/dashboard') : navigate('/login')} className="text-primary-600 hover:underline">create your own</button></p>
         </div>
 
-        <form onSubmit={handleSearch} className="mb-8">
-          <div className="relative max-w-md">
-            <HiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <Input
-              type="search"
-              placeholder="Search communities..."
+        <div className="max-w-2xl mx-auto mb-8">
+          <form onSubmit={handleSearch} className="relative">
+            <HiSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search for anything"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="pl-10"
+              className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-gray-900 placeholder-gray-400"
             />
-          </div>
-        </form>
+          </form>
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-2 mb-12">
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                cat.id === 'all'
+                  ? 'bg-gray-900 text-white'
+                  : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {cat.icon && <span className="mr-2">{cat.icon}</span>}
+              {cat.label}
+            </button>
+          ))}
+        </div>
 
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-200 overflow-hidden animate-pulse">
-                <div className="h-32 bg-gray-200" />
-                <div className="p-4 space-y-3">
-                  <div className="h-5 bg-gray-200 rounded w-3/4" />
-                  <div className="h-4 bg-gray-200 rounded w-full" />
-                  <div className="h-4 bg-gray-200 rounded w-2/3" />
-                  <div className="flex gap-4">
-                    <div className="h-4 bg-gray-200 rounded w-16" />
-                    <div className="h-4 bg-gray-200 rounded w-16" />
-                  </div>
-                </div>
-              </div>
+              <div key={i} className="bg-white rounded-xl border border-gray-200 overflow-hidden animate-pulse h-80" />
             ))}
           </div>
         ) : (
@@ -83,37 +94,48 @@ export function DiscoverPage() {
                 <Link
                   key={community.id}
                   to={`/community/${community.slug}`}
-                  className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md hover:border-primary-200 transition-all group"
+                  className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all group flex flex-col h-full"
                 >
-                  <div className="h-32 overflow-hidden">
+                  <div className="h-32 relative overflow-hidden bg-gray-100">
                     {community.coverImage ? (
                       <img
                         src={community.coverImage}
                         alt=""
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-primary-400 to-primary-700" />
+                      <div className="w-full h-full bg-gradient-to-br from-primary-500 to-primary-800" />
                     )}
                   </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-primary-600 transition-colors">
+                  
+                  <div className="px-5 pb-5 flex-1 flex flex-col relative">
+                    <div className="w-16 h-16 rounded-xl border-4 border-white shadow-sm bg-white -mt-8 mb-3 overflow-hidden flex items-center justify-center">
+                       {/* Logo logic */}
+                       <div className="w-full h-full bg-black text-white flex items-center justify-center font-bold text-xl">
+                         {community.name.charAt(0)}
+                       </div>
+                    </div>
+
+                    <h3 className="font-bold text-gray-900 text-lg mb-1 group-hover:text-primary-600 transition-colors">
                       {community.name}
                     </h3>
-                    <p className="text-sm text-gray-600 line-clamp-2 mb-3">
-                      {community.description || 'No description'}
+                    
+                    <p className="text-sm text-gray-500 line-clamp-3 mb-4 flex-1">
+                      {community.description || 'No description available for this community.'}
                     </p>
-                    <div className="flex gap-4 text-sm text-gray-500 mb-3">
-                      <span>{community.memberCount} members</span>
-                      <span>{community.courseCount} courses</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Avatar
-                        src={community.creator.avatar}
-                        name={community.creator.name}
-                        size="sm"
-                      />
-                      <span className="text-sm text-gray-600">{community.creator.name}</span>
+                    
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
+                      <div className="flex items-center gap-4 text-xs font-medium text-gray-500">
+                        {community.visibility === 'PRIVATE' ? (
+                          <span className="flex items-center gap-1"><HiLockClosed className="w-3 h-3" /> Private</span>
+                        ) : (
+                          <span className="flex items-center gap-1"><HiGlobeAlt className="w-3 h-3" /> Public</span>
+                        )}
+                        <span>{community.memberCount} members</span>
+                      </div>
+                      <div className="text-sm font-bold text-gray-900">
+                        {community.price && Number(community.price) > 0 ? `$${community.price}/mo` : 'Free'}
+                      </div>
                     </div>
                   </div>
                 </Link>
@@ -121,10 +143,9 @@ export function DiscoverPage() {
             </div>
 
             {data && data.totalPages > 1 && (
-              <div className="mt-8 flex items-center justify-center gap-2">
+              <div className="mt-12 flex items-center justify-center gap-2">
                 <Button
                   variant="outline"
-                  size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1}
                 >
@@ -135,7 +156,6 @@ export function DiscoverPage() {
                 </span>
                 <Button
                   variant="outline"
-                  size="sm"
                   onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))}
                   disabled={page >= data.totalPages}
                 >
