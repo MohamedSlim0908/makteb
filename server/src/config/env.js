@@ -1,10 +1,20 @@
 import dotenv from 'dotenv';
-dotenv.config();
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Charger .env à la racine du projet (documenté dans PROJECT.md)
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+dotenv.config(); // permet aussi un .env dans server/ pour override
 
 export const env = {
   port: parseInt(process.env.PORT || '4000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
+  // En dev, accepter aussi le client sur d'autres ports (ex. 5174 si 5173 est pris)
+  clientUrls: process.env.CLIENT_URL
+    ? [process.env.CLIENT_URL]
+    : ['http://localhost:5173', 'http://localhost:5174', 'http://127.0.0.1:5173', 'http://127.0.0.1:5174'],
 
   databaseUrl: process.env.DATABASE_URL,
   redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',

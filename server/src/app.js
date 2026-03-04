@@ -20,7 +20,18 @@ const app = express();
 const httpServer = createServer(app);
 
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors({ origin: env.clientUrl, credentials: true }));
+app.use(
+  cors({
+    origin: env.clientUrls && env.clientUrls.length > 0
+      ? (origin, cb) => {
+          if (!origin || env.clientUrls.includes(origin)) return cb(null, true);
+          if (env.nodeEnv === 'development' && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return cb(null, true);
+          return cb(null, false);
+        }
+      : env.clientUrl,
+    credentials: true,
+  })
+);
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));

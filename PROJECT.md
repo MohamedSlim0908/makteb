@@ -27,6 +27,7 @@
    - 8.5 [Cycle concret pour chaque tâche](#85-cycle-concret-pour-chaque-tâche)
    - 8.6 [Ordre de démarrage du Sprint 1](#86-ordre-de-démarrage-du-sprint-1)
    - 8.7 [Sprints suggérés](#87-sprints-suggérés)
+   - 8.8 [Plan MVP — Première version déployable](#88-plan-mvp--première-version-déployable-promotion-du-produit)
 9. [Démarrage rapide](#9-démarrage-rapide)
 
 ---
@@ -765,6 +766,88 @@ Jour 1+   →  M1 : Commence ProtectedRoute + refacto des pages
 | M3 | Déploiement production final, CDN pour les assets statiques, backup automatique PostgreSQL |
 
 **Livrables :** Application en production, monitoring en place
+
+---
+
+### 8.8 Plan MVP — Première version déployable (promotion du produit)
+
+> **Objectif :** Enchaîner 3–4 sprints courts pour déployer une première version simple et fonctionnelle, puis commencer à promouvoir le produit (landing, premiers utilisateurs, feedback).
+
+Ces sprints reprennent et priorisent des éléments des sprints 1–4 et 11. On vise **une app en ligne, stable et présentable** avant d’enchaîner sur les fonctionnalités avancées (quiz, analytics, etc.).
+
+#### Principes
+
+- **Sprints courts possibles** : 1 à 2 semaines selon la capacité de l’équipe.
+- **Un seul objectif par sprint** : déploiement → landing → parcours visiteur → (optionnel) paiement ou monitoring.
+- **Livrable déployé à chaque fin de sprint** : toujours une URL publique à montrer.
+
+---
+
+#### Sprint MVP 1 — Déploiement & stabilité
+
+**Objectif :** Avoir l’application en ligne (staging ou production) et stable.
+
+| Qui | Tâches |
+|-----|--------|
+| **Frontend** | États de chargement et erreurs sur les pages principales, variables d’env pour l’API en prod |
+| **Backend** | Rate limiting sur `/auth/login` et `/auth/register`, seed de démo si pas encore fait |
+| **Infra** | Dockerfiles client + serveur, pipeline de déploiement (Railway / Render / VPS), `.env` production et staging |
+
+**Livrable :** App déployée et accessible via une URL (ex. `https://staging.makteb.tn` ou sous-domaine fournisseur).
+
+**Critère de fin :** Un visiteur peut ouvrir l’URL, voir la liste des communautés (ou la page d’accueil actuelle) sans crash.
+
+---
+
+#### Sprint MVP 2 — Landing & première impression
+
+**Objectif :** Donner une vraie page d’accueil pour la promotion (réseaux, bouche-à-oreille).
+
+| Qui | Tâches |
+|-----|--------|
+| **Frontend** | Page landing : hero, valeur ajoutée (communautés, cours), CTA « Découvrir » / « S’inscrire », pages 404/500 personnalisées |
+| **Backend** | (Optionnel) Endpoint stats publiques pour la landing (ex. nombre de communautés, de cours) |
+| **Infra** | Domaine personnalisé si prévu, redirection HTTPS, env de prod finalisée |
+
+**Livrable :** Landing présentable + parcours « Visiteur → Inscription » fonctionnel.
+
+**Critère de fin :** On peut partager le lien et dire « Voici Makteb » avec une page d’accueil claire et un bouton d’inscription qui marche.
+
+---
+
+#### Sprint MVP 3 — Parcours visiteur & découverte
+
+**Objectif :** Que quelqu’un qui débarque puisse comprendre le produit et faire un premier parcours utile (sans payer si on reporte les paiements).
+
+| Qui | Tâches |
+|-----|--------|
+| **Frontend** | Parcours clair : accueil → liste communautés → détail communauté → aperçu cours (ou premier module gratuit), inscription/connexion au bon moment |
+| **Backend** | Routes publiques propres (communautés, cours en lecture seule), pagination si besoin |
+| **Infra** | Monitoring basique (Sentry ou équivalent) pour voir les erreurs en prod |
+
+**Livrable :** Un visiteur peut s’inscrire, rejoindre une communauté (gratuite), voir un cours ou un extrait sans bloquer.
+
+**Critère de fin :** « Inscription → Rejoindre une communauté → Voir du contenu » fonctionne de bout en bout en production.
+
+---
+
+#### Sprint MVP 4 (optionnel) — Paiement ou monitoring
+
+**Objectif :** Soit ouvrir les communautés payantes, soit sécuriser la prod pour la promo.
+
+- **Option A — Paiements :** Flow Flouci minimal (rejoindre une communauté payante), webhook, statut « payé » visible. Permet de promouvoir des communautés payantes.
+- **Option B — Monitoring :** Sentry (front + back), alertes uptime, backup BDD. Permet de promouvoir en étant serein sur la stabilité.
+
+Choisir A ou B selon la priorité (monétisation vs. confiance technique).
+
+---
+
+#### Après les sprints MVP
+
+- **Promotion :** Partager la landing, premiers posts réseaux, feedback utilisateurs.
+- **Suite :** Revenir au plan détaillé (sprints 2–11) en priorisant selon les retours (ex. recherche, profils, éditeur avancé, analytics).
+
+*Document mis à jour le 4 mars 2026 — Plan MVP ajouté pour une première version déployable et promotable.*
 
 ---
 
