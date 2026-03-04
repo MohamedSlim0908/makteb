@@ -22,7 +22,11 @@
 8. [Plan de développement en équipe de 3](#8-plan-de-développement-en-équipe-de-3)
    - 8.1 [Répartition des rôles](#81-répartition-des-rôles)
    - 8.2 [Workflow Git](#82-workflow-git)
-   - 8.3 [Sprints suggérés](#83-sprints-suggérés)
+   - 8.3 [Mise en place avant le Sprint 1](#83-mise-en-place-avant-le-sprint-1)
+   - 8.4 [Déroulement d'un sprint](#84-déroulement-dun-sprint-2-semaines)
+   - 8.5 [Cycle concret pour chaque tâche](#85-cycle-concret-pour-chaque-tâche)
+   - 8.6 [Ordre de démarrage du Sprint 1](#86-ordre-de-démarrage-du-sprint-1)
+   - 8.7 [Sprints suggérés](#87-sprints-suggérés)
 9. [Démarrage rapide](#9-démarrage-rapide)
 
 ---
@@ -472,7 +476,143 @@ chore/<nom>   →  tooling, config, deps
 
 ---
 
-### 8.3 Sprints suggérés
+### 8.3 Mise en place avant le Sprint 1
+
+Avant de commencer à coder, ces étapes d'organisation sont à faire **une seule fois**.
+
+#### Étape 1 — Initialiser la branche `develop`
+
+```bash
+# Sur le repo partagé (à faire par M3)
+git checkout -b develop
+git push -u origin develop
+```
+
+Protéger `main` sur GitHub :
+`Settings → Branches → Add branch protection rule`
+- Branch name: `main`
+- Cocher : "Require a pull request before merging"
+- Cocher : "Require approvals" → 1 reviewer minimum
+
+#### Étape 2 — Créer les issues GitHub
+
+Pour chaque tâche du tableau sprint, créer une issue GitHub correspondante :
+- **Titre** : `[Sprint X] Description courte de la tâche`
+- **Assigné** : M1, M2 ou M3
+- **Labels** : `frontend` / `backend` / `infra` + `sprint-1`, `sprint-2`, etc.
+
+Exemple :
+```
+[Sprint 1] Ajouter ProtectedRoute              → assigné M1, labels: frontend, sprint-1
+[Sprint 1] Rate limiting sur /auth/login        → assigné M2, labels: backend, sprint-1
+[Sprint 1] Configurer GitHub Actions CI         → assigné M3, labels: infra, sprint-1
+```
+
+#### Étape 3 — Créer le board Kanban GitHub
+
+`Repo → Projects → New project → Board view`
+
+Colonnes à créer :
+```
+Backlog  →  In Progress  →  In Review  →  Done
+```
+
+Chaque issue se déplace dans ces colonnes au fil du sprint. Chaque membre ne doit avoir **qu'une seule carte en "In Progress"** à la fois.
+
+#### Étape 4 — Règle des territoires (éviter les conflits Git)
+
+Pour minimiser les conflits, chaque membre a un périmètre exclusif :
+
+| Membre | Périmètre |
+|---|---|
+| M1 | `client/src/` uniquement |
+| M2 | `server/src/` et `prisma/` uniquement |
+| M3 | `.github/`, `docker-compose.yml`, `Dockerfile*`, et les features fullstack end-to-end |
+
+Les fichiers partagés à risque (`package.json`, `prisma/schema.prisma`) : **communiquer avant de les modifier**, ne jamais modifier les deux en même temps sans coordination.
+
+---
+
+### 8.4 Déroulement d'un sprint (2 semaines)
+
+```
+── Semaine 1 ──────────────────────────────────────────────
+Lundi     → Réunion de lancement (30 min)
+              Chacun présente ce qu'il prend, identifie les dépendances
+              Ex: M2 doit finir l'endpoint avant que M1 puisse connecter l'UI
+
+Mar–Ven   → Développement sur sa branche feat/
+              Commits réguliers (au moins 1 par jour de travail)
+              Rester à jour avec develop : git fetch && git rebase origin/develop
+
+Vendredi  → Point d'équipe (15 min)
+              Blocages ? Dépendances entre membres ? Ajustements ?
+
+── Semaine 2 ──────────────────────────────────────────────
+Lun–Mer   → Fin du développement + écriture/mise à jour des tests
+              Chaque feature doit avoir ses tests avant d'ouvrir la PR
+
+Jeudi     → Ouverture des Pull Requests vers develop
+              Review croisée : chaque PR doit être lue par un autre membre
+              Commentaires constructifs, suggestions, approbation
+
+Vendredi  → Merge des PRs approuvées dans develop
+              Merge de develop dans main (tag de version : v1.0, v1.1...)
+              Démo rapide (15 min) : chacun montre ce qu'il a livré
+              Rétrospective (10 min) : ce qui a bien marché, ce qui bloque
+```
+
+---
+
+### 8.5 Cycle concret pour chaque tâche
+
+```bash
+# 1. Toujours partir de develop à jour
+git checkout develop && git pull
+
+# 2. Créer sa branche avec un nom clair
+git checkout -b feat/sprint1-protected-route     # M1
+git checkout -b feat/sprint1-rate-limiting       # M2
+git checkout -b feat/sprint1-ci-pipeline         # M3
+
+# 3. Développer + commiter régulièrement
+git add .
+git commit -m "feat(auth): add ProtectedRoute component"
+git commit -m "fix(auth): redirect to /login when token missing"
+
+# 4. Rester synchronisé avec develop (surtout en semaine 2)
+git fetch origin
+git rebase origin/develop
+# En cas de conflit : résoudre, puis git rebase --continue
+
+# 5. Pousser et ouvrir la PR
+git push -u origin feat/sprint1-protected-route
+# Sur GitHub : New Pull Request → base: develop ← compare: feat/sprint1-protected-route
+# Ajouter : description, screenshots si UI, issue liée (#numéro)
+
+# 6. Attendre la review, appliquer les retours, puis merge squash
+```
+
+---
+
+### 8.6 Ordre de démarrage du Sprint 1
+
+Le Sprint 1 doit démarrer dans cet ordre précis car certaines tâches débloquent les autres :
+
+```
+Jour 1-2  →  M3 : Configure GitHub Actions CI
+              (les PRs suivantes auront les tests automatiques dès le départ)
+
+Jour 2-3  →  M2 : Crée le seed de données
+              (M1 et M3 peuvent tester l'app avec de vraies données)
+
+Jour 1+   →  M1 : Commence ProtectedRoute + refacto des pages
+              (indépendant, peut démarrer immédiatement)
+```
+
+---
+
+### 8.7 Sprints suggérés
 
 > Durée suggérée : **2 semaines par sprint**
 
