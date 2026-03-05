@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronDown, ChevronRight, Play } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Play, ArrowLeft } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Avatar } from '../components/ui/Avatar';
+import { Card } from '../components/ui/Card';
+import { PageSpinner } from '../components/ui/Spinner';
+import { EmptyState } from '../components/ui/EmptyState';
 import axios from 'axios';
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
@@ -45,45 +48,38 @@ export function CourseLearnPage() {
     mutationFn: (lessonId) => api.post(`/lessons/${lessonId}/complete`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['course-progress', id] });
-      toast.success('Lesson marked complete');
+      toast.success('Lesson completed!');
     },
-    onError: (err) => {
-      toast.error(err instanceof Error ? err.message : 'Failed to mark complete');
-    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to mark complete'),
   });
+
+  if (!user) { navigate('/login'); return null; }
+  if (courseLoading || !course) return <PageSpinner />;
 
   const isEnrolled = !!progress;
   const completedIds = new Set(progress?.completedLessons ?? []);
-  const totalLessons = course?.modules.reduce((acc, m) => acc + m.lessons.length, 0) ?? 0;
+  const totalLessons = course.modules.reduce((acc, m) => acc + m.lessons.length, 0);
   const completedCount = completedIds.size;
   const progressPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
-  const firstLessonId = course?.modules[0]?.lessons[0]?.id;
-
-  if (!user) {
-    navigate('/login');
-    return null;
-  }
-
-  if (courseLoading || !course) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-pulse text-gray-400">Loading course...</div>
-      </div>
-    );
-  }
+  const firstLessonId = course.modules[0]?.lessons[0]?.id;
 
   if (!isEnrolled) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-3xl mx-auto px-4 py-8">
-          <div className="bg-white rounded-xl border border-gray-200 p-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">{course.title}</h1>
-            <p className="text-gray-600 mb-6">
-              You need to enroll from the course community page before accessing lessons.
-            </p>
-            <Button onClick={() => navigate(`/course/${id}`)}>Go to Course Community</Button>
+      <div className="min-h-[calc(100dvh-3.5rem)] bg-[#f5f5f5] flex items-center justify-center px-4">
+        <Card className="max-w-lg w-full">
+          <div className="p-8">
+            <EmptyState
+              title={course.title}
+              description="You need to enroll from the course community page before accessing lessons."
+              action={
+                <Button onClick={() => navigate(`/course/${id}`)}>
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Go to Course Community
+                </Button>
+              }
+            />
           </div>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -93,17 +89,30 @@ export function CourseLearnPage() {
   };
 
   const effectiveLessonId = currentLessonId || firstLessonId;
-  const effectiveLesson = course.modules.flatMap((m) => m.lessons).find((lesson) => lesson.id === effectiveLessonId);
+  const effectiveLesson = course.modules.flatMap((m) => m.lessons).find((l) => l.id === effectiveLessonId);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <aside className="w-72 bg-white border-r border-gray-200 flex-shrink-0 overflow-y-auto">
+    <div className="min-h-[calc(100dvh-3.5rem)] bg-[#f5f5f5] flex">
+      {/* Sidebar */}
+      <aside className="w-72 bg-white border-r border-gray-200 flex-shrink-0 overflow-y-auto hidden md:block">
         <div className="p-4 border-b border-gray-200">
-          <h2 className="font-semibold text-gray-900 truncate">{course.title}</h2>
-          <Link to={`/course/${id}`} className="text-xs text-primary-600 hover:underline">
+          <h2 className="font-semibold text-gray-900 truncate text-sm">{course.title}</h2>
+          <Link to={`/course/${id}`} className="text-xs text-primary-600 hover:text-primary-700 font-medium">
             Back to Community
           </Link>
         </div>
+
+        {/* Progress bar */}
+        <div className="px-4 py-3 border-b border-gray-100">
+          <div className="flex items-center justify-between text-xs text-gray-500 mb-1.5">
+            <span>Progress</span>
+            <span>{progressPercent}%</span>
+          </div>
+          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-full bg-primary-600 transition-all rounded-full" style={{ width: `${progressPercent}%` }} />
+          </div>
+        </div>
+
         <nav className="p-2">
           {course.modules
             .sort((a, b) => a.order - b.order)
@@ -111,13 +120,13 @@ export function CourseLearnPage() {
               const isExpanded = expandedModules[mod.id] ?? true;
               const lessons = [...mod.lessons].sort((a, b) => a.order - b.order);
               return (
-                <div key={mod.id} className="mb-2">
+                <div key={mod.id} className="mb-1">
                   <button
                     onClick={() => toggleModule(mod.id)}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
                   >
-                    {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                    {mod.title}
+                    {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-gray-400" /> : <ChevronRight className="w-3.5 h-3.5 text-gray-400" />}
+                    <span className="truncate">{mod.title}</span>
                   </button>
                   {isExpanded && (
                     <ul className="ml-4 space-y-0.5">
@@ -127,12 +136,12 @@ export function CourseLearnPage() {
                             onClick={() => setCurrentLessonId(lesson.id)}
                             className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm rounded-lg transition-colors ${
                               effectiveLessonId === lesson.id
-                                ? 'bg-primary-50 text-primary-700'
+                                ? 'bg-primary-50 text-primary-700 font-medium'
                                 : 'text-gray-600 hover:bg-gray-50'
                             }`}
                           >
                             {completedIds.has(lesson.id) ? (
-                              <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
+                              <Check className="w-4 h-4 text-success-600 flex-shrink-0" />
                             ) : (
                               <Play className="w-4 h-4 text-gray-400 flex-shrink-0" />
                             )}
@@ -148,16 +157,17 @@ export function CourseLearnPage() {
         </nav>
       </aside>
 
+      {/* Main */}
       <main className="flex-1 flex flex-col min-w-0">
         <div className="bg-white border-b border-gray-200 px-6 py-3">
           <div className="flex items-center gap-4">
             <Avatar src={course.creator?.avatar} name={course.creator?.name} size="sm" />
             <div className="flex-1">
-              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div className="h-full bg-primary-600 transition-all" style={{ width: `${progressPercent}%` }} />
+              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-full bg-primary-600 transition-all rounded-full" style={{ width: `${progressPercent}%` }} />
               </div>
             </div>
-            <span className="text-sm text-gray-600 whitespace-nowrap">
+            <span className="text-xs text-gray-500 whitespace-nowrap font-medium">
               {completedCount} / {totalLessons} lessons
             </span>
           </div>
@@ -167,10 +177,10 @@ export function CourseLearnPage() {
           {effectiveLesson ? (
             <div className="max-w-3xl">
               <h2 className="text-xl font-bold text-gray-900 mb-4">{effectiveLesson.title}</h2>
+
               {effectiveLesson.videoUrl && (
-                <div className="mb-6 rounded-lg overflow-hidden bg-black aspect-video">
-                  {effectiveLesson.videoUrl.includes('youtube.com') ||
-                  effectiveLesson.videoUrl.includes('youtu.be') ? (
+                <div className="mb-6 rounded-xl overflow-hidden bg-black aspect-video">
+                  {effectiveLesson.videoUrl.includes('youtube.com') || effectiveLesson.videoUrl.includes('youtu.be') ? (
                     <iframe
                       src={
                         effectiveLesson.videoUrl.includes('youtu.be/')
@@ -186,18 +196,22 @@ export function CourseLearnPage() {
                   )}
                 </div>
               )}
+
               {effectiveLesson.content && (
-                <div className="max-w-none mb-6 whitespace-pre-wrap text-gray-700">
+                <div className="max-w-none mb-6 whitespace-pre-wrap text-gray-600 leading-relaxed">
                   {effectiveLesson.content}
                 </div>
               )}
+
               {!effectiveLesson.content && !effectiveLesson.videoUrl && (
-                <p className="text-gray-500 mb-6">No content for this lesson yet.</p>
+                <p className="text-gray-400 mb-6">No content for this lesson yet.</p>
               )}
+
               <Button
                 onClick={() => completeMutation.mutate(effectiveLesson.id)}
                 disabled={completedIds.has(effectiveLesson.id)}
                 isLoading={completeMutation.isPending}
+                variant={completedIds.has(effectiveLesson.id) ? 'secondary' : 'primary'}
               >
                 {completedIds.has(effectiveLesson.id) ? (
                   <>
@@ -210,7 +224,7 @@ export function CourseLearnPage() {
               </Button>
             </div>
           ) : (
-            <p className="text-gray-500">Select a lesson to start.</p>
+            <EmptyState title="Select a lesson" description="Choose a lesson from the sidebar to start learning." />
           )}
         </div>
       </main>

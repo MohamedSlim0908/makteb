@@ -1,32 +1,88 @@
 import { Link } from 'react-router-dom';
-import { GraduationCap, Star, Users } from 'lucide-react';
-import { Button } from '../components/ui/Button';
+import { ArrowRight, BookOpen, MessageSquare, Trophy, Users, Zap, Shield } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
+
+const FEATURES = [
+  {
+    icon: Users,
+    title: 'Thriving Communities',
+    description: 'Join or create communities around any topic. Public or private, free or paid.',
+  },
+  {
+    icon: BookOpen,
+    title: 'Structured Courses',
+    description: 'Learn through organized modules and lessons with video, text, and quizzes.',
+  },
+  {
+    icon: MessageSquare,
+    title: 'Rich Discussions',
+    description: 'Engage in meaningful conversations with posts, comments, and real-time updates.',
+  },
+  {
+    icon: Trophy,
+    title: 'Gamification',
+    description: 'Earn points, level up, and climb leaderboards as you learn and contribute.',
+  },
+  {
+    icon: Zap,
+    title: 'Real-time Experience',
+    description: 'Instant notifications, live updates, and seamless collaboration.',
+  },
+  {
+    icon: Shield,
+    title: 'Secure & Reliable',
+    description: 'Built with modern security practices. Your data is safe and private.',
+  },
+];
+
+const STEPS = [
+  { step: '01', title: 'Sign up for free', description: 'Create your account in seconds. No credit card required.' },
+  { step: '02', title: 'Join a community', description: 'Browse and discover communities that match your interests.' },
+  { step: '03', title: 'Start learning', description: 'Access courses, participate in discussions, and track your progress.' },
+];
 
 export function LandingPage() {
+  const { user } = useAuth();
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-[calc(100dvh-4rem)] bg-white">
       {/* Hero */}
-      <section className="relative bg-gradient-to-br from-primary-600 to-primary-800 text-white overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.05\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-50" />
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
-          <div className="text-center max-w-3xl mx-auto">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">
-              Build your community. Share your knowledge.
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-primary-50/30" />
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary-100/40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-primary-200/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3" />
+
+        <div className="relative max-w-[1200px] mx-auto px-6 pt-20 pb-24 md:pt-32 md:pb-36">
+          <div className="max-w-3xl mx-auto text-center">
+            <div className="inline-flex items-center gap-2 bg-primary-50 text-primary-700 rounded-full px-4 py-1.5 text-sm font-medium mb-6">
+              <Zap className="w-4 h-4" />
+              The future of community learning
+            </div>
+
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-gray-900 tracking-tight leading-[1.1] mb-6">
+              Learn, grow, and{' '}
+              <span className="text-primary-600">connect</span>{' '}
+              together
             </h1>
-            <p className="mt-6 text-lg sm:text-xl text-primary-100">
-              Makteb is the platform for Tunisian creators, coaches, and educators. Create vibrant
-              communities, deliver structured courses, and grow your audience.
+
+            <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-10 leading-relaxed">
+              Makteb brings communities, courses, and discussions together in one platform.
+              Join learners and creators building something meaningful.
             </p>
-            <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/register">
-                <Button size="lg" className="w-full sm:w-auto bg-white text-primary-700 hover:bg-primary-50">
-                  Get Started
-                </Button>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link
+                to={user ? '/discover' : '/register'}
+                className="inline-flex items-center gap-2 px-8 py-3.5 bg-gray-900 text-white rounded-lg font-semibold text-base hover:bg-black transition-colors shadow-lg shadow-gray-900/20"
+              >
+                {user ? 'Explore Communities' : 'Get Started Free'}
+                <ArrowRight className="w-5 h-5" />
               </Link>
-              <Link to="/discover">
-                <Button variant="outline" size="lg" className="w-full sm:w-auto border-white text-white hover:bg-white/10">
-                  Explore Communities
-                </Button>
+              <Link
+                to="/discover"
+                className="inline-flex items-center gap-2 px-8 py-3.5 bg-white text-gray-700 rounded-lg font-semibold text-base border border-gray-200 hover:bg-gray-50 transition-colors"
+              >
+                Browse Communities
               </Link>
             </div>
           </div>
@@ -34,105 +90,94 @@ export function LandingPage() {
       </section>
 
       {/* Features */}
-      <section className="py-20 bg-white dark:bg-gray-900">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white text-center mb-4">
-            Everything you need to succeed
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 text-center max-w-2xl mx-auto mb-16">
-            Makteb brings together the tools that creators need to build, engage, and monetize their communities.
-          </p>
-          <div className="grid md:grid-cols-3 gap-12">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary-100 text-primary-600 mb-4">
-                <Users className="w-7 h-7" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Vibrant Communities</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Create spaces where your audience connects, shares, and grows together. Foster meaningful engagement with discussions, events, and member-only content.
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary-100 text-primary-600 mb-4">
-                <GraduationCap className="w-7 h-7" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Structured Courses</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Deliver your expertise through well-organized courses. Add lessons, quizzes, and progress tracking to help your students learn effectively.
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary-100 text-primary-600 mb-4">
-                <Star className="w-7 h-7" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Gamification</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Keep your community motivated with badges, points, and leaderboards. Turn learning and participation into an engaging, rewarding experience.
-              </p>
-            </div>
+      <section className="py-20 md:py-28 bg-[#f5f5f5]">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Everything you need to learn and teach
+            </h2>
+            <p className="text-lg text-gray-500 max-w-2xl mx-auto">
+              A complete platform designed for community-driven learning experiences.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {FEATURES.map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <div
+                  key={feature.title}
+                  className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-card-hover hover:border-gray-300 transition-all duration-300"
+                >
+                  <div className="w-11 h-11 rounded-lg bg-primary-50 flex items-center justify-center mb-4">
+                    <Icon className="w-5 h-5 text-primary-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
+                  <p className="text-sm text-gray-500 leading-relaxed">{feature.description}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
 
       {/* How it works */}
-      <section className="py-20 bg-gray-50 dark:bg-gray-950">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white text-center mb-4">
-            How it works
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 text-center max-w-2xl mx-auto mb-16">
-            Get started in three simple steps.
-          </p>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="relative">
-              <div className="flex items-center gap-4">
-                <span className="flex-shrink-0 w-10 h-10 rounded-full bg-primary-600 text-white font-bold flex items-center justify-center">1</span>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Create your account</h3>
+      <section className="py-20 md:py-28 bg-white">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Get started in minutes
+            </h2>
+            <p className="text-lg text-gray-500 max-w-2xl mx-auto">
+              Three simple steps to start your learning journey.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            {STEPS.map((item) => (
+              <div key={item.step} className="text-center">
+                <div className="w-14 h-14 rounded-full bg-gray-900 text-white flex items-center justify-center font-bold text-lg mx-auto mb-5">
+                  {item.step}
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">{item.title}</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">{item.description}</p>
               </div>
-              <p className="mt-3 ml-14 text-gray-600 dark:text-gray-400">
-                Sign up in seconds. Connect with Google or Facebook for a quick start.
-              </p>
-            </div>
-            <div className="relative">
-              <div className="flex items-center gap-4">
-                <span className="flex-shrink-0 w-10 h-10 rounded-full bg-primary-600 text-white font-bold flex items-center justify-center">2</span>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Build your community</h3>
-              </div>
-              <p className="mt-3 ml-14 text-gray-600 dark:text-gray-400">
-                Set up your space, invite members, and start sharing your content.
-              </p>
-            </div>
-            <div className="relative">
-              <div className="flex items-center gap-4">
-                <span className="flex-shrink-0 w-10 h-10 rounded-full bg-primary-600 text-white font-bold flex items-center justify-center">3</span>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Grow and thrive</h3>
-              </div>
-              <p className="mt-3 ml-14 text-gray-600 dark:text-gray-400">
-                Engage your audience with courses, discussions, and gamification.
-              </p>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="py-20 bg-primary-600">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-white">
-            Ready to build your community?
+      <section className="py-20 md:py-28 bg-gray-900">
+        <div className="max-w-[800px] mx-auto px-6 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            Ready to start learning?
           </h2>
-          <p className="mt-4 text-lg text-primary-100">
-            Join Makteb today and start sharing your knowledge with the world.
+          <p className="text-lg text-gray-400 mb-10 max-w-xl mx-auto">
+            Join thousands of learners and creators on Makteb. It's free to get started.
           </p>
-          <div className="mt-8">
-            <Link to="/register">
-              <Button size="lg" className="bg-white text-primary-700 hover:bg-primary-50">
-                Get Started Free
-              </Button>
-            </Link>
-          </div>
+          <Link
+            to={user ? '/discover' : '/register'}
+            className="inline-flex items-center gap-2 px-8 py-3.5 bg-white text-gray-900 rounded-lg font-semibold text-base hover:bg-gray-100 transition-colors"
+          >
+            {user ? 'Explore Communities' : 'Create Your Account'}
+            <ArrowRight className="w-5 h-5" />
+          </Link>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="bg-gray-950 text-gray-400 py-10">
+        <div className="max-w-[1200px] mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-white rounded-md flex items-center justify-center text-gray-900 font-bold text-sm">
+              M
+            </div>
+            <span className="font-semibold text-white">Makteb</span>
+          </div>
+          <p className="text-sm">&copy; {new Date().getFullYear()} Makteb. All rights reserved.</p>
+        </div>
+      </footer>
     </div>
   );
 }

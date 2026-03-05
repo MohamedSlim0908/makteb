@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Navbar } from '../components/layout/Navbar';
 import { useAuth } from '../hooks/useAuth';
-import { DiscoverPage } from './DiscoverPage';
+import { Button } from '../components/ui/Button';
 
 export function RegisterPage() {
   const [firstName, setFirstName] = useState('');
@@ -37,124 +36,117 @@ export function RegisterPage() {
   }
 
   const isDisabled =
-    isSubmitting ||
-    !firstName.trim() ||
-    !lastName.trim() ||
-    !email.trim() ||
-    !password.trim();
+    isSubmitting || !firstName.trim() || !lastName.trim() || !email.trim() || !password.trim();
 
   return (
-    <div className="relative h-screen overflow-hidden bg-gray-100">
-      <div className="pointer-events-none select-none">
-        <Navbar />
-        <DiscoverPage />
-      </div>
-
-      <div
-        className="absolute inset-0 z-50 bg-black/60 px-4 py-8"
-        onClick={() => navigate('/discover')}
-      >
-        <div className="mx-auto flex h-full max-w-[540px] items-center">
-          <section
-            aria-labelledby="register-title"
-            aria-modal="true"
-            role="dialog"
-            onClick={(e) => e.stopPropagation()}
-            className="w-full rounded-2xl border border-gray-200 bg-white px-7 py-8 shadow-2xl sm:px-10 sm:py-9"
-          >
-            <div className="mb-7 text-center">
-              <p className="text-[52px] font-bold leading-none tracking-tight">
-                <span className="text-blue-700">M</span>
-                <span className="text-red-700">a</span>
-                <span className="text-yellow-600">k</span>
-                <span className="text-blue-600">t</span>
-                <span className="text-emerald-600">e</span>
-                <span className="text-orange-600">b</span>
-              </p>
-              <h1 id="register-title" className="mt-4 text-4xl font-bold text-gray-900">
-                Create your Makteb account
-              </h1>
+    <div className="min-h-screen bg-[#f5f5f5] flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-[440px] animate-slide-up">
+        <div className="text-center mb-8">
+          <Link to="/" className="inline-flex items-center gap-2 mb-6">
+            <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+              M
             </div>
+          </Link>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create your account</h1>
+          <p className="text-gray-500">Start your learning journey on Makteb</p>
+        </div>
 
-            <form onSubmit={handleSubmit} className="space-y-3.5">
-              <div className="relative">
-                <label
-                  htmlFor="firstName"
-                  className="absolute left-3 -top-2 bg-white px-1 text-sm font-medium text-gray-700"
-                >
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-card p-8">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="reg-first" className="block text-sm font-medium text-gray-700 mb-1.5">
                   First name
                 </label>
                 <input
-                  id="firstName"
+                  id="reg-first"
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   autoComplete="given-name"
-                  className="h-12 w-full rounded-md border-2 border-gray-900 px-3.5 text-lg text-gray-900 outline-none"
+                  className="w-full h-11 px-3.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
                   required
                 />
               </div>
+              <div>
+                <label htmlFor="reg-last" className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Last name
+                </label>
+                <input
+                  id="reg-last"
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  autoComplete="family-name"
+                  className="w-full h-11 px-3.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                  required
+                />
+              </div>
+            </div>
 
+            <div>
+              <label htmlFor="reg-email" className="block text-sm font-medium text-gray-700 mb-1.5">
+                Email
+              </label>
               <input
-                type="text"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                placeholder="Last name"
-                autoComplete="family-name"
-                className="h-12 w-full rounded-md border border-gray-300 px-3.5 text-lg text-gray-900 placeholder:text-gray-500 focus:border-gray-500 focus:outline-none"
-                required
-              />
-
-              <input
+                id="reg-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
+                placeholder="you@example.com"
                 autoComplete="email"
-                className="h-12 w-full rounded-md border border-gray-300 px-3.5 text-lg text-gray-900 placeholder:text-gray-500 focus:border-gray-500 focus:outline-none"
+                className="w-full h-11 px-3.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
                 required
               />
+            </div>
 
+            <div>
+              <label htmlFor="reg-password" className="block text-sm font-medium text-gray-700 mb-1.5">
+                Password
+              </label>
               <input
+                id="reg-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
+                placeholder="Create a password"
                 autoComplete="new-password"
-                className="h-12 w-full rounded-md border border-gray-300 px-3.5 text-lg text-gray-900 placeholder:text-gray-500 focus:border-gray-500 focus:outline-none"
+                className="w-full h-11 px-3.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
                 required
               />
+            </div>
 
-              {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && (
+              <div className="bg-error-50 text-error-700 text-sm rounded-lg px-4 py-3 border border-red-200">
+                {error}
+              </div>
+            )}
 
-              <button
-                type="submit"
-                disabled={isDisabled}
-                className="mt-2 h-12 w-full rounded-md bg-gray-200 text-lg font-bold tracking-wide text-gray-600 transition-colors enabled:bg-gray-900 enabled:text-white enabled:hover:bg-black disabled:cursor-not-allowed disabled:opacity-90"
-              >
-                {isSubmitting ? 'SIGNING UP...' : 'SIGN UP'}
-              </button>
-            </form>
+            <Button
+              type="submit"
+              disabled={isDisabled}
+              isLoading={isSubmitting}
+              className="w-full h-11"
+              variant="primary"
+            >
+              Create Account
+            </Button>
 
-            <p className="mt-5 text-center text-sm text-gray-500">
+            <p className="text-xs text-gray-400 text-center leading-relaxed">
               By signing up, you accept our{' '}
-              <a href="#" className="underline underline-offset-2 hover:text-gray-700">
-                terms
-              </a>{' '}
-              and{' '}
-              <a href="#" className="underline underline-offset-2 hover:text-gray-700">
-                privacy policy
-              </a>
-              .
+              <a href="#" className="underline hover:text-gray-600">terms</a> and{' '}
+              <a href="#" className="underline hover:text-gray-600">privacy policy</a>.
             </p>
+          </form>
 
-            <p className="mt-4 text-center text-base text-gray-700">
+          <div className="mt-6 pt-6 border-t border-gray-100 text-center">
+            <p className="text-sm text-gray-500">
               Already have an account?{' '}
-              <Link to="/login" className="font-medium text-primary-600 hover:underline">
-                Log in
+              <Link to="/login" className="font-medium text-primary-600 hover:text-primary-700">
+                Sign in
               </Link>
             </p>
-          </section>
+          </div>
         </div>
       </div>
     </div>
