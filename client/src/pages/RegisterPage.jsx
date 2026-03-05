@@ -29,7 +29,7 @@ export function RegisterPage() {
       await register(name, email, password);
       navigate('/discover');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
+      setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

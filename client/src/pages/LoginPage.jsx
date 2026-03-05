@@ -19,7 +19,7 @@ export function LoginPage() {
       await login(email, password);
       navigate('/discover');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid email or password');
+      setError(err.response?.data?.message || 'Invalid email or password');
     } finally {
       setIsSubmitting(false);
     }
