@@ -25,8 +25,8 @@ router.get('/', async (req, res) => {
   res.json(result);
 });
 
-router.get('/:slugOrId', async (req, res) => {
-  const community = await communityService.getCommunityBySlugOrId(param(req, 'slugOrId'));
+router.get('/:slug', async (req, res) => {
+  const community = await communityService.getCommunityBySlug(param(req, 'slug'));
   res.json({ community });
 });
 

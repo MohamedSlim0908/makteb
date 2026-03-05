@@ -49,20 +49,6 @@ export async function getCommunityBySlug(slug) {
   return community;
 }
 
-/** Resolve community by slug or numeric id (for frontend routes like /community/1 or /community/my-slug). */
-export async function getCommunityBySlugOrId(slugOrId) {
-  const isNumericId = /^\d+$/.test(String(slugOrId));
-  const where = isNumericId ? { id: parseInt(slugOrId, 10) } : { slug: slugOrId };
-  const community = await prisma.community.findUnique({
-    where,
-    include: {
-      creator: { select: USER_PUBLIC_SELECT },
-      _count: { select: { members: true, courses: true, posts: true } },
-    },
-  });
-  if (!community) throw new AppError('Community not found', 404);
-  return community;
-}
 
 export async function createCommunity(userId, { name, description, visibility, price, coverImage }) {
   let communitySlug = slugify(name, { lower: true });
