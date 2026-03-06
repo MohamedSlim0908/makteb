@@ -174,7 +174,7 @@ export function Navbar() {
               onSubmit={(e) => {
                 e.preventDefault();
                 if (navSearchInput.trim()) {
-                  navigate(`/discover?q=${encodeURIComponent(navSearchInput.trim())}`);
+                  navigate(`/search?q=${encodeURIComponent(navSearchInput.trim())}`);
                   setNavSearchInput('');
                 }
               }}
@@ -319,6 +319,15 @@ export function Navbar() {
           {user ? (
             <>
               <Link
+                to="/search"
+                className={`hidden md:inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors ${
+                  pathname === '/search' ? 'text-gray-900 bg-gray-100' : 'text-gray-500 hover:bg-gray-100'
+                }`}
+              >
+                <Search className="w-[18px] h-[18px]" />
+              </Link>
+
+              <Link
                 to="/discover"
                 className={`hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
                   pathname === '/discover' ? 'text-gray-900 bg-gray-100' : 'text-gray-600 hover:bg-gray-100'
@@ -367,6 +376,11 @@ export function Navbar() {
                     <Link to="/discover" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors md:hidden">
                       Discover
                     </Link>
+                    {user.role === 'ADMIN' && (
+                      <Link to="/admin" className="block px-4 py-2.5 text-sm text-purple-600 hover:bg-gray-50 transition-colors">
+                        Admin Dashboard
+                      </Link>
+                    )}
                     <div className="border-t border-gray-100 mt-1 pt-1">
                       <button
                         onClick={logout}

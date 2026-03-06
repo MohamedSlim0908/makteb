@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '../../lib/api';
+import toast from 'react-hot-toast';
+import { api, getErrorMessage } from '../../lib/api';
 
 export function useVerifyPayment() {
   const qc = useQueryClient();
@@ -8,6 +9,9 @@ export function useVerifyPayment() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['membership'] });
       qc.invalidateQueries({ queryKey: ['course-progress'] });
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, 'Payment verification failed'));
     },
   });
 }

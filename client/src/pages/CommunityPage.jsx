@@ -87,7 +87,7 @@ export function CommunityPage() {
   const isMember = !!membership?.membership;
   const memberRole = membership?.membership?.role;
 
-  const { data: members } = useMembers(communityId);
+  const { data: members, isLoading: membersLoading } = useMembers(communityId);
 
   const {
     data: postsData,
@@ -104,7 +104,7 @@ export function CommunityPage() {
 
   const { data: leaderboard, isLoading: leaderboardLoading } = useLeaderboard(communityId);
 
-  const { data: courses } = useCourses(communityId, { enabled: activeTab === 'classroom' });
+  const { data: courses, isLoading: coursesLoading } = useCourses(communityId, { enabled: activeTab === 'classroom' });
 
   useCommunitySocket(communityId);
 
@@ -130,7 +130,6 @@ export function CommunityPage() {
   function doJoin() {
     joinMutation.mutate(undefined, {
       onSuccess: () => toast.success('Welcome to the community!'),
-      onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to join'),
     });
   }
 
@@ -165,16 +164,13 @@ export function CommunityPage() {
           setPostCategory('GENERAL');
           toast.success('Post created!');
         },
-        onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to create post'),
       }
     );
   }
 
   function handleLike(postId) {
     if (!user) { toast.error('Sign in to like posts.'); return; }
-    likeMutation.mutate(postId, {
-      onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to like'),
-    });
+    likeMutation.mutate(postId);
   }
 
   if (communityLoading) return <PageSpinner />;
@@ -192,9 +188,9 @@ export function CommunityPage() {
       <div className="border-b border-gray-200">
         <div className="max-w-[1200px] mx-auto px-4">
           <div className="py-5">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-gray-900 flex items-center justify-center text-white font-bold text-xl shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gray-900 flex items-center justify-center text-white font-bold text-lg sm:text-xl shrink-0">
                   {(community.name || 'C').charAt(0)}
                 </div>
                 <div>
@@ -211,13 +207,14 @@ export function CommunityPage() {
                 {user && isMember ? (
                   <>
                     {(memberRole === 'OWNER' || memberRole === 'ADMIN') && (
-                      <Button variant="ghost" size="sm">
-                        <Settings className="w-4 h-4" />
-                      </Button>
+                      <Link to={`/community/${slug}/settings`}>
+                        <Button variant="ghost" size="sm">
+                          <Settings className="w-4 h-4" />
+                        </Button>
+                      </Link>
                     )}
                     <Button variant="outline" size="sm" onClick={() => leaveMutation.mutate(undefined, {
                       onSuccess: () => toast.success('You left the community.'),
-                      onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to leave'),
                     })} isLoading={leaveMutation.isPending}>
                       Leave
                     </Button>
@@ -294,7 +291,6 @@ export function CommunityPage() {
                       onDelete={() => setDeletingPost(post)}
                       onTogglePin={() => togglePinMutation.mutate(post.id, {
                         onSuccess: () => toast.success(post.pinned ? 'Post unpinned' : 'Post pinned'),
-                        onError: () => toast.error('Failed to pin post'),
                       })}
                     />
                   ))}
@@ -332,7 +328,11 @@ export function CommunityPage() {
         {activeTab === 'classroom' && (
           <div className="max-w-3xl">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Courses</h2>
-            {courses && courses.length > 0 ? (
+            {coursesLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => <Skeleton key={i} variant="course-row" />)}
+              </div>
+            ) : courses && courses.length > 0 ? (
               <div className="space-y-3">
                 {courses.map((course) => (
                   <Link
@@ -373,7 +373,7 @@ export function CommunityPage() {
           />
         )}
 
-        {activeTab === 'members' && <MembersList members={members || []} />}
+        {activeTab === 'members' && <MembersList members={members || []} isLoading={membersLoading} />}
 
         {activeTab === 'leaderboards' && (
           <Leaderboard entries={leaderboardLoading ? [] : leaderboard || []} />
@@ -414,7 +414,6 @@ export function CommunityPage() {
           onClose={() => setEditingPost(null)}
           onSave={(data) => updatePostMutation.mutate(data, {
             onSuccess: () => { setEditingPost(null); toast.success('Post updated'); },
-            onError: () => toast.error('Failed to update post'),
           })}
         />
       )}
@@ -425,7 +424,6 @@ export function CommunityPage() {
           onClose={() => setDeletingPost(null)}
           onConfirm={() => deletePostMutation.mutate(deletingPost.id, {
             onSuccess: () => { setDeletingPost(null); toast.success('Post deleted'); },
-            onError: () => toast.error('Failed to delete post'),
           })}
         />
       )}

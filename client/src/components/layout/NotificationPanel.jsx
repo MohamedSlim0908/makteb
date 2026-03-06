@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Check } from 'lucide-react';
+import { Bell, Check } from 'lucide-react';
 import { useNotifications } from '../../features/notifications/useNotifications';
 import { useMarkAsRead } from '../../features/notifications/useMarkAsRead';
 import { useMarkAllAsRead } from '../../features/notifications/useMarkAllAsRead';
@@ -60,8 +60,12 @@ export function NotificationPanel({ onClose }) {
         {isLoading ? (
           <div className="px-4 py-8 text-center text-sm text-gray-400">Loading...</div>
         ) : notifications.length === 0 ? (
-          <div className="px-4 py-8 text-center text-sm text-gray-400">
-            No notifications yet
+          <div className="px-4 py-10 text-center">
+            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+              <Bell className="w-5 h-5 text-gray-400" />
+            </div>
+            <p className="text-sm font-medium text-gray-900">No notifications</p>
+            <p className="text-xs text-gray-500 mt-0.5">You're all caught up!</p>
           </div>
         ) : (
           notifications.map((notification) => (

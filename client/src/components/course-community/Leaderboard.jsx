@@ -1,5 +1,6 @@
 import { Trophy } from 'lucide-react';
 import { Avatar } from '../ui/Avatar';
+import { EmptyState } from '../ui/EmptyState';
 
 const RANK_COLORS = {
   1: 'bg-yellow-400 text-yellow-900',
@@ -42,6 +43,14 @@ export function Leaderboard({ entries, compact = false, onViewAll }) {
         <span className="text-sm text-gray-400 ml-1">30-day</span>
       </div>
       <div>
+        {(!entries || entries.length === 0) && (
+          <EmptyState
+            icon={Trophy}
+            title="No activity yet"
+            description="Points earned by members will be shown here."
+            className="py-10"
+          />
+        )}
         {entries?.map((entry, idx) => {
           const rank = entry.rank || idx + 1;
           const rankClass = RANK_COLORS[rank] || 'bg-gray-100 text-gray-600';
