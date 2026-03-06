@@ -56,6 +56,36 @@ body {
   min-height: 100dvh;
 }
 
+.appContainer {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.communityGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+.communitySidebar {
+  position: static;
+}
+
+@media (min-width: 1024px) {
+  .communityGrid {
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+
+  .communitySidebar {
+    position: sticky;
+    top: 88px;
+    align-self: start;
+  }
+}
+
 /* Utility classes */
 .focus-ring {
   @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;

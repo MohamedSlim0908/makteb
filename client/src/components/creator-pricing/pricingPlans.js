@@ -1,0 +1,41 @@
+export const PRICING_PLANS = [
+  {
+    id: 'starter',
+    name: 'Starter',
+    price: 9,
+    billingPeriod: '/month',
+    featuresIncluded: [
+      'All core features',
+      'Unlimited members',
+      'Unlimited course videos',
+      'Unlimited live sessions',
+      '10% transaction fee',
+    ],
+    featuresExcluded: [
+      'Custom URL',
+      'Hide suggested communities',
+      'Advanced analytics',
+    ],
+    ctaText: 'TRY FOR FREE',
+    highlighted: false,
+  },
+  {
+    id: 'pro',
+    name: 'Pro',
+    price: 99,
+    billingPeriod: '/month',
+    featuresIncluded: [
+      'All features',
+      'Unlimited members',
+      'Unlimited course videos',
+      'Unlimited live sessions',
+      '2.9% transaction fee',
+      'Custom URL',
+      'Hide suggested communities',
+      'Advanced analytics',
+    ],
+    featuresExcluded: [],
+    ctaText: 'TRY FOR FREE',
+    highlighted: true,
+  },
+];

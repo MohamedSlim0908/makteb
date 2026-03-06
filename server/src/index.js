@@ -8,7 +8,15 @@ async function start() {
     await prisma.$connect();
     console.log('Connected to PostgreSQL');
 
-    await redis.connect();
+    try {
+      await redis.connect();
+    } catch (err) {
+      if (env.nodeEnv === 'production') {
+        throw err;
+      }
+
+      console.warn('Redis unavailable in development. Continuing without Redis.');
+    }
 
     httpServer.listen(env.port, () => {
       console.log(`Makteb server running on port ${env.port}`);

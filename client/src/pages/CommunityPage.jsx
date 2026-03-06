@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   useInfiniteQuery,
   useMutation,
@@ -7,18 +7,21 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import {
+  CheckCircle2,
+  Link2,
+  Lock,
   MessageCircle,
   Search,
+  Tag,
+  UserRound,
   Users,
   Settings,
-  Lock,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Avatar } from '../components/ui/Avatar';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
-import { Tabs } from '../components/ui/Tabs';
 import { Skeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { PageSpinner } from '../components/ui/Spinner';
@@ -26,13 +29,9 @@ import { useAuth } from '../hooks/useAuth';
 import { api } from '../lib/api';
 import { PostCard } from '../components/course-community/PostCard';
 import { PostComposer } from '../components/course-community/PostComposer';
-import { CategoryFilters } from '../components/course-community/CategoryFilters';
-import { CommunitySidebar } from '../components/course-community/CommunitySidebar';
 import { Leaderboard } from '../components/course-community/Leaderboard';
 import { MembersList } from '../components/course-community/MembersList';
-import { MapView } from '../components/course-community/MapView';
 import { CalendarMonthView } from '../components/course-community/CalendarMonthView';
-import { EventNotice } from '../components/course-community/EventNotice';
 
 const PAGE_SIZE = 10;
 
@@ -44,6 +43,7 @@ const TABS = [
   { id: 'leaderboards', label: 'Leaderboards' },
   { id: 'about', label: 'About' },
 ];
+const PUBLIC_TAB_IDS = new Set(['about']);
 
 const CATEGORY_OPTIONS = [
   { value: 'ALL', label: 'All' },
@@ -52,26 +52,31 @@ const CATEGORY_OPTIONS = [
   { value: 'WORKFLOW_PRODUCTIVITY', label: 'Resources' },
 ];
 
-function formatDate(value) {
-  return new Date(value).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+function getAvailableTabs(isMember) {
+  if (isMember) return TABS;
+  return TABS.filter((tab) => PUBLIC_TAB_IDS.has(tab.id));
+}
+
+function formatPrice(value) {
+  const amount = Number(value);
+  if (!amount) return 'Free';
+  return `$${amount}/month`;
 }
 
 
 export function CommunityPage() {
   const { slug } = useParams();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState('community');
   const [activeCategory, setActiveCategory] = useState('ALL');
   const [postTitle, setPostTitle] = useState('');
   const [postContent, setPostContent] = useState('');
   const [postCategory, setPostCategory] = useState('GENERAL');
   const observerRef = useRef(null);
+  const requestedTab = searchParams.get('tab');
 
   // Fetch community
   const { data: community, isLoading: communityLoading } = useQuery({
@@ -86,18 +91,21 @@ export function CommunityPage() {
   const communityId = community?.id;
 
   // Membership
-  const { data: membership } = useQuery({
+  const { data: membership, isLoading: membershipLoading } = useQuery({
     queryKey: ['membership', communityId, user?.id],
     queryFn: async () => {
       const { data } = await api.get(`/communities/${communityId}/membership`);
-      return data;
+      return data.membership ?? null;
     },
     enabled: !!communityId && !!user,
     retry: false,
   });
 
-  const isMember = membership?.isMember ?? false;
+  const isMember = membership?.status ? membership.status === 'ACTIVE' : Boolean(membership);
   const memberRole = membership?.role;
+  const availableTabs = useMemo(() => getAvailableTabs(isMember), [isMember]);
+  const defaultTab = availableTabs[0]?.id || 'about';
+  const activeTab = availableTabs.some((tab) => tab.id === requestedTab) ? requestedTab : defaultTab;
 
   // Members
   const { data: members } = useQuery({
@@ -106,7 +114,7 @@ export function CommunityPage() {
       const { data } = await api.get(`/communities/${communityId}/members`);
       return data.members;
     },
-    enabled: !!communityId,
+    enabled: !!communityId && isMember,
   });
 
   // Posts (infinite)
@@ -130,7 +138,7 @@ export function CommunityPage() {
       const loaded = allPages.reduce((acc, p) => acc + (p.posts?.length || 0), 0);
       return loaded < (lastPage.total || 0) ? allPages.length + 1 : undefined;
     },
-    enabled: !!communityId && activeTab === 'community',
+    enabled: !!communityId && isMember && activeTab === 'community',
   });
 
   const posts = useMemo(
@@ -145,7 +153,7 @@ export function CommunityPage() {
       const { data } = await api.get(`/gamification/leaderboard/${communityId}`);
       return data.leaderboard;
     },
-    enabled: !!communityId,
+    enabled: !!communityId && isMember,
   });
 
   // Courses
@@ -155,8 +163,31 @@ export function CommunityPage() {
       const { data } = await api.get(`/courses/community/${communityId}`);
       return data.courses;
     },
-    enabled: !!communityId && activeTab === 'classroom',
+    enabled: !!communityId && (activeTab === 'about' || (isMember && activeTab === 'classroom')),
   });
+
+  const featuredCourse = courses?.[0] ?? null;
+  const featuredCoverImage = featuredCourse?.coverImage || community?.coverImage || null;
+  const featuredTitle = featuredCourse?.title || community?.name || 'Community';
+  const featuredDescription =
+    featuredCourse?.description ||
+    community?.description ||
+    'Learn with this community and unlock the full member experience.';
+  const featuredCreator = featuredCourse?.creator?.name || community?.creator?.name || 'Community creator';
+  const featuredPrice = featuredCourse?.price ?? community?.price ?? 0;
+  const memberCount = community?.memberCount || community?._count?.members || 0;
+  const moduleCount = featuredCourse?._count?.modules || 0;
+  const adminCount = members?.filter((member) => ['OWNER', 'ADMIN'].includes(member.role)).length || 1;
+  const onlineCount = Math.max(
+    1,
+    isMember
+      ? Math.round((members?.length || memberCount) * 0.08)
+      : Math.round((memberCount || 1) * 0.02)
+  );
+  const descriptionParagraphs = featuredDescription
+    .split(/\n{2,}/)
+    .map((part) => part.trim())
+    .filter(Boolean);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -169,6 +200,14 @@ export function CommunityPage() {
     if (el) observer.observe(el);
     return () => { if (el) observer.unobserve(el); };
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  useEffect(() => {
+    if (requestedTab !== activeTab) {
+      const next = new URLSearchParams(searchParams);
+      next.set('tab', activeTab);
+      setSearchParams(next, { replace: true });
+    }
+  }, [activeTab, requestedTab, searchParams, setSearchParams]);
 
   // Mutations
   const joinMutation = useMutation({
@@ -211,8 +250,16 @@ export function CommunityPage() {
     onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to like'),
   });
 
+  function handleTabChange(tabId) {
+    const nextTab = availableTabs.some((tab) => tab.id === tabId) ? tabId : defaultTab;
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', nextTab);
+    setSearchParams(next);
+  }
+
   function handleCreatePost(e) {
     e.preventDefault();
+    if (!isMember) { toast.error('Join the community to post.'); return; }
     if (!postTitle.trim() || !postContent.trim()) return;
     createPostMutation.mutate({
       communityId,
@@ -225,10 +272,23 @@ export function CommunityPage() {
 
   function handleLike(postId) {
     if (!user) { toast.error('Sign in to like posts.'); return; }
+    if (!isMember) { toast.error('Join the community to interact.'); return; }
     likeMutation.mutate(postId);
   }
 
-  if (communityLoading) return <PageSpinner />;
+  function handleAboutPrimaryAction() {
+    if (isMember) {
+      handleTabChange('community');
+      return;
+    }
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    joinMutation.mutate();
+  }
+
+  if (communityLoading || (user && membershipLoading)) return <PageSpinner />;
   if (!community) {
     return (
       <div className="min-h-[calc(100dvh-3.5rem)] bg-[#f5f5f5] flex items-center justify-center">
@@ -241,9 +301,8 @@ export function CommunityPage() {
     <div className="min-h-[calc(100dvh-3.5rem)] bg-[#f5f5f5]">
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-[1200px] mx-auto px-6">
-          <div className="py-6">
-            <div className="flex items-start justify-between gap-4">
+        <div className="appContainer py-6">
+          <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-xl shadow-sm">
                   {(community.name || 'C').charAt(0)}
@@ -284,19 +343,15 @@ export function CommunityPage() {
                 )}
               </div>
             </div>
-          </div>
-
-          <Tabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-[1200px] mx-auto px-6 py-6">
+      <div className="appContainer py-6">
         {activeTab === 'community' && (
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-            <div className="space-y-4">
-              {/* Post Composer */}
-              {isMember && user && (
+          <div className="space-y-4">
+            {isMember && user && (
+              <div className="lg:pr-[384px]">
                 <PostComposer
                   user={user}
                   title={postTitle}
@@ -308,130 +363,134 @@ export function CommunityPage() {
                   onSubmit={handleCreatePost}
                   isSubmitting={createPostMutation.isPending}
                 />
-              )}
+              </div>
+            )}
 
-              {/* Category Filters */}
-              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-                {CATEGORY_OPTIONS.map((cat) => (
-                  <button
-                    key={cat.value}
-                    onClick={() => setActiveCategory(cat.value)}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                      activeCategory === cat.value
-                        ? 'bg-gray-900 text-white'
-                        : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    {cat.label}
-                  </button>
-                ))}
+            <div className="communityGrid">
+              <div className="space-y-4 min-w-0">
+                {/* Category Filters */}
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                  {CATEGORY_OPTIONS.map((cat) => (
+                    <button
+                      key={cat.value}
+                      onClick={() => setActiveCategory(cat.value)}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                        activeCategory === cat.value
+                          ? 'bg-gray-900 text-white'
+                          : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Posts */}
+                {postsLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => <Skeleton key={i} variant="post" />)}
+                  </div>
+                ) : posts.length > 0 ? (
+                  <div className="space-y-3">
+                    {posts.map((post) => (
+                      <PostCard
+                        key={post.id}
+                        post={post}
+                        onToggleLike={handleLike}
+                        likePending={likeMutation.isPending}
+                      />
+                    ))}
+                    <div ref={observerRef} className="h-4" />
+                    {isFetchingNextPage && (
+                      <div className="flex justify-center py-4">
+                        <div className="animate-spin w-6 h-6 border-2 border-primary-600 border-t-transparent rounded-full" />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <Card>
+                    <EmptyState
+                      icon={MessageCircle}
+                      title="No posts yet"
+                      description={isMember ? 'Be the first to start a discussion!' : 'Join the community to participate.'}
+                    />
+                  </Card>
+                )}
               </div>
 
-              {/* Posts */}
-              {postsLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => <Skeleton key={i} variant="post" />)}
-                </div>
-              ) : posts.length > 0 ? (
-                <div className="space-y-3">
-                  {posts.map((post) => (
-                    <PostCard
-                      key={post.id}
-                      post={post}
-                      onToggleLike={handleLike}
-                      likePending={likeMutation.isPending}
-                    />
-                  ))}
-                  <div ref={observerRef} className="h-4" />
-                  {isFetchingNextPage && (
-                    <div className="flex justify-center py-4">
-                      <div className="animate-spin w-6 h-6 border-2 border-primary-600 border-t-transparent rounded-full" />
-                    </div>
-                  )}
-                </div>
-              ) : (
+              {/* Sidebar */}
+              <aside className="space-y-4 communitySidebar">
+                {/* About */}
                 <Card>
-                  <EmptyState
-                    icon={MessageCircle}
-                    title="No posts yet"
-                    description={isMember ? 'Be the first to start a discussion!' : 'Join the community to participate.'}
-                  />
+                  <div className="p-5">
+                    <h3 className="font-semibold text-gray-900 text-sm mb-2">About</h3>
+                    <p className="text-sm text-gray-500 leading-relaxed line-clamp-4">
+                      {community.description || 'No description yet.'}
+                    </p>
+                  </div>
                 </Card>
-              )}
+
+                {/* Members preview */}
+                {members && members.length > 0 && (
+                  <Card>
+                    <div className="p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-gray-900 text-sm">Members</h3>
+                        <button
+                          onClick={() => handleTabChange('members')}
+                          className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                        >
+                          View all
+                        </button>
+                      </div>
+                      <div className="flex -space-x-2">
+                        {members.slice(0, 8).map((m) => (
+                          <Avatar
+                            key={m.user?.id || m.id}
+                            src={m.user?.avatar}
+                            name={m.user?.name || 'User'}
+                            size="sm"
+                            className="ring-2 ring-white"
+                          />
+                        ))}
+                        {members.length > 8 && (
+                          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-500 ring-2 ring-white">
+                            +{members.length - 8}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                )}
+
+                {/* Leaderboard preview */}
+                {leaderboard && leaderboard.length > 0 && (
+                  <Card>
+                    <div className="p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-gray-900 text-sm">Leaderboard</h3>
+                        <button
+                          onClick={() => handleTabChange('leaderboards')}
+                          className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                        >
+                          View all
+                        </button>
+                      </div>
+                      <div className="space-y-2">
+                        {leaderboard.slice(0, 5).map((entry, idx) => (
+                          <div key={entry.user?.id || idx} className="flex items-center gap-2">
+                            <span className="w-5 text-xs font-bold text-gray-400 text-center">{idx + 1}</span>
+                            <Avatar src={entry.user?.avatar} name={entry.user?.name} size="sm" />
+                            <span className="text-sm text-gray-700 truncate flex-1">{entry.user?.name}</span>
+                            <span className="text-xs font-medium text-primary-600">{entry.totalPoints} pts</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </Card>
+                )}
+              </aside>
             </div>
-
-            {/* Sidebar */}
-            <aside className="space-y-4 hidden lg:block">
-              {/* About */}
-              <Card>
-                <div className="p-5">
-                  <h3 className="font-semibold text-gray-900 text-sm mb-2">About</h3>
-                  <p className="text-sm text-gray-500 leading-relaxed line-clamp-4">
-                    {community.description || 'No description yet.'}
-                  </p>
-                </div>
-              </Card>
-
-              {/* Members preview */}
-              {members && members.length > 0 && (
-                <Card>
-                  <div className="p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-gray-900 text-sm">Members</h3>
-                      <button
-                        onClick={() => setActiveTab('members')}
-                        className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                      >
-                        View all
-                      </button>
-                    </div>
-                    <div className="flex -space-x-2">
-                      {members.slice(0, 8).map((m) => (
-                        <Avatar
-                          key={m.user?.id || m.id}
-                          src={m.user?.avatar}
-                          name={m.user?.name || 'User'}
-                          size="sm"
-                          className="ring-2 ring-white"
-                        />
-                      ))}
-                      {members.length > 8 && (
-                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-500 ring-2 ring-white">
-                          +{members.length - 8}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              )}
-
-              {/* Leaderboard preview */}
-              {leaderboard && leaderboard.length > 0 && (
-                <Card>
-                  <div className="p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-gray-900 text-sm">Leaderboard</h3>
-                      <button
-                        onClick={() => setActiveTab('leaderboards')}
-                        className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                      >
-                        View all
-                      </button>
-                    </div>
-                    <div className="space-y-2">
-                      {leaderboard.slice(0, 5).map((entry, idx) => (
-                        <div key={entry.user?.id || idx} className="flex items-center gap-2">
-                          <span className="w-5 text-xs font-bold text-gray-400 text-center">{idx + 1}</span>
-                          <Avatar src={entry.user?.avatar} name={entry.user?.name} size="sm" />
-                          <span className="text-sm text-gray-700 truncate flex-1">{entry.user?.name}</span>
-                          <span className="text-xs font-medium text-primary-600">{entry.totalPoints} pts</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </Card>
-              )}
-            </aside>
           </div>
         )}
 
@@ -475,31 +534,147 @@ export function CommunityPage() {
         )}
 
         {activeTab === 'about' && (
-          <div className="max-w-3xl">
-            <Card>
-              <div className="p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-3">About {community.name}</h2>
-                <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">
-                  {community.description || 'No description provided yet.'}
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Members</p>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">
-                      {community.memberCount || community._count?.members || 0}
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-6">
+            <Card className="p-4 sm:p-6">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">{community.name}</h2>
+              <p className="text-base sm:text-lg text-gray-600 mt-1">{featuredTitle}</p>
+
+              <div className="mt-4 rounded-xl overflow-hidden border border-gray-200 bg-black aspect-[16/9]">
+                {featuredCoverImage ? (
+                  <img src={featuredCoverImage} alt={featuredTitle} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-primary-600 via-primary-500 to-primary-700" />
+                )}
+              </div>
+
+              <div className="mt-3 flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                {(courses && courses.length > 0 ? courses.slice(0, 6) : [featuredCourse]).map((course, index) => (
+                  <div
+                    key={course?.id || `preview-${index}`}
+                    className="min-w-[128px] rounded-lg border border-gray-200 bg-gray-50 overflow-hidden"
+                  >
+                    <div className="h-16 bg-gray-100">
+                      {course?.coverImage ? (
+                        <img src={course.coverImage} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300" />
+                      )}
+                    </div>
+                    <p className="px-2 py-1.5 text-[11px] font-medium text-gray-600 truncate">
+                      {course?.title || `Preview ${index + 1}`}
                     </p>
                   </div>
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Posts</p>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">{community._count?.posts || 0}</p>
-                  </div>
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Created</p>
-                    <p className="text-lg font-bold text-gray-900 mt-1">{formatDate(community.createdAt)}</p>
-                  </div>
-                </div>
+                ))}
+              </div>
+
+              <div className="mt-5 border-t border-gray-200 pt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-gray-700">
+                <span className="inline-flex items-center gap-1.5">
+                  <Lock className="w-4 h-4 text-gray-400" />
+                  {community.visibility === 'PRIVATE' ? 'Private' : 'Public'}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Users className="w-4 h-4 text-gray-400" />
+                  {memberCount.toLocaleString()} members
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Tag className="w-4 h-4 text-gray-400" />
+                  {formatPrice(featuredPrice)}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <UserRound className="w-4 h-4 text-gray-400" />
+                  By {featuredCreator}
+                </span>
+              </div>
+
+              <div className="mt-5 space-y-3 text-sm sm:text-base text-gray-700 leading-relaxed">
+                {descriptionParagraphs.length > 0 ? (
+                  descriptionParagraphs.map((paragraph, idx) => <p key={idx}>{paragraph}</p>)
+                ) : (
+                  <p>Join this community to access courses, members, and all learning resources.</p>
+                )}
+              </div>
+
+              <div className="mt-6 border-t border-gray-200 pt-4">
+                <h3 className="text-lg font-semibold text-gray-900">What You Get</h3>
+                <ul className="mt-3 space-y-2 text-sm text-gray-700">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-success-600 mt-0.5 shrink-0" />
+                    <span>{courses?.length || 0} published courses</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-success-600 mt-0.5 shrink-0" />
+                    <span>{moduleCount} modules in the featured course</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-success-600 mt-0.5 shrink-0" />
+                    <span>Private discussions, members list, and leaderboard access</span>
+                  </li>
+                </ul>
               </div>
             </Card>
+
+            <aside className="lg:sticky lg:top-[84px] self-start space-y-4">
+              <Card className="overflow-hidden">
+                <div className="h-36 bg-black">
+                  {featuredCoverImage ? (
+                    <img src={featuredCoverImage} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-primary-500 to-primary-700" />
+                  )}
+                </div>
+                <div className="p-4">
+                  <h3 className="text-2xl font-semibold text-gray-900">{community.name}</h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {community.slug ? `makteb.com/${community.slug}` : `makteb.com/community/${community.id}`}
+                  </p>
+                  <p className="text-sm text-gray-700 mt-4 leading-relaxed line-clamp-4">
+                    {featuredDescription}
+                  </p>
+
+                  <div className="mt-4 space-y-1.5 text-sm text-gray-500">
+                    <p className="inline-flex items-center gap-2">
+                      <Link2 className="w-3.5 h-3.5" />
+                      Community updates
+                    </p>
+                    <p className="inline-flex items-center gap-2">
+                      <Link2 className="w-3.5 h-3.5" />
+                      Coaching resources
+                    </p>
+                    <p className="inline-flex items-center gap-2">
+                      <Link2 className="w-3.5 h-3.5" />
+                      Partner offers
+                    </p>
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <p className="text-xl font-semibold text-gray-900">{memberCount.toLocaleString()}</p>
+                      <p className="text-xs text-gray-500">Members</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-semibold text-gray-900">{onlineCount.toLocaleString()}</p>
+                      <p className="text-xs text-gray-500">Online</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-semibold text-gray-900">{adminCount.toLocaleString()}</p>
+                      <p className="text-xs text-gray-500">Admins</p>
+                    </div>
+                  </div>
+
+                  <Button
+                    className="w-full mt-4 bg-[#e6c66e] text-gray-900 hover:bg-[#d8b963] focus-visible:ring-yellow-500 font-semibold"
+                    onClick={handleAboutPrimaryAction}
+                    isLoading={joinMutation.isPending}
+                  >
+                    {isMember ? 'OPEN COMMUNITY' : 'START FREE TRIAL'}
+                  </Button>
+                </div>
+              </Card>
+
+              <p className="text-center text-xs text-gray-400">
+                Powered by <span className="font-semibold text-gray-500">makteb</span>
+              </p>
+            </aside>
           </div>
         )}
       </div>

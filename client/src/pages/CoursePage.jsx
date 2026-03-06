@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { Lock } from 'lucide-react';
+import { CheckCircle2, Lock, Tag, UserRound, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
@@ -12,7 +12,6 @@ import { Tabs } from '../components/ui/Tabs';
 import { Skeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { PageSpinner } from '../components/ui/Spinner';
-import { Badge } from '../components/ui/Badge';
 import { PostComposer } from '../components/course-community/PostComposer';
 import { CategoryFilters } from '../components/course-community/CategoryFilters';
 import { PostCard } from '../components/course-community/PostCard';
@@ -29,22 +28,160 @@ import {
 } from '../components/course-community/mockData';
 import { EventNotice } from '../components/course-community/EventNotice';
 
-const PUBLIC_TAB_IDS = new Set(['community', 'about']);
-
-function getAvailableTabs(isEnrolled) {
-  if (isEnrolled) return COURSE_TABS;
-  return COURSE_TABS.filter((tab) => PUBLIC_TAB_IDS.has(tab.id));
-}
-
 function sortModules(modules = []) {
   return [...modules].sort((a, b) => a.order - b.order);
+}
+
+function formatCoursePrice(price) {
+  const value = Number(price);
+  if (!value) return 'Free';
+  return `$${value}/month`;
+}
+
+function CourseEnrollmentPage({ course, onEnroll, isEnrolling, isLoggedIn }) {
+  const modules = sortModules(course.modules || []);
+  const totalLessons = modules.reduce((count, module) => count + (module.lessons?.length || 0), 0);
+  const memberCount = course.community?._count?.members || 0;
+  const enrollmentCount = course._count?.enrollments || 0;
+  const creatorName = course.creator?.name || course.community?.creator?.name || 'Course creator';
+  const description =
+    course.description ||
+    course.community?.description ||
+    'Join this course to unlock the full classroom and community.';
+  const ctaLabel = isLoggedIn
+    ? Number(course.price) > 0
+      ? `ENROLL FOR ${formatCoursePrice(course.price)}`
+      : 'START FREE TRIAL'
+    : 'SIGN IN TO START FREE TRIAL';
+
+  return (
+    <div className="min-h-[calc(100dvh-3.5rem)] bg-[#f5f5f5]">
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-8 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-6">
+        <Card className="p-4 sm:p-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            {course.community?.name || course.title}
+          </h1>
+          <h2 className="text-base sm:text-lg text-gray-600 mt-1">{course.title}</h2>
+
+          <div className="mt-4 rounded-xl overflow-hidden border border-gray-200 bg-black aspect-[16/9]">
+            {course.coverImage ? (
+              <img src={course.coverImage} alt={course.title} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-primary-600 via-primary-500 to-primary-700 flex items-center justify-center">
+                <p className="text-white/95 text-center text-lg sm:text-2xl font-semibold px-6">{course.title}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-3 flex gap-2 overflow-x-auto no-scrollbar pb-1">
+            {modules.length > 0 ? (
+              modules.slice(0, 6).map((module, index) => (
+                <div
+                  key={module.id}
+                  className="min-w-[132px] max-w-[172px] rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"
+                >
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Module {index + 1}</p>
+                  <p className="text-xs text-gray-700 mt-1 line-clamp-2">{module.title}</p>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">
+                Course modules will appear here after enrollment.
+              </div>
+            )}
+          </div>
+
+          <div className="mt-5 border-t border-gray-200 pt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-gray-700">
+            <span className="inline-flex items-center gap-1.5">
+              <Lock className="w-4 h-4 text-gray-400" />
+              {course.community?.visibility === 'PRIVATE' ? 'Private' : 'Public'}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Users className="w-4 h-4 text-gray-400" />
+              {memberCount.toLocaleString()} members
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Tag className="w-4 h-4 text-gray-400" />
+              {formatCoursePrice(course.price)}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <UserRound className="w-4 h-4 text-gray-400" />
+              By {creatorName}
+            </span>
+          </div>
+
+          <p className="mt-5 text-sm sm:text-base text-gray-700 leading-relaxed whitespace-pre-wrap">{description}</p>
+
+          <div className="mt-6 border-t border-gray-200 pt-4">
+            <h3 className="text-lg font-semibold text-gray-900">What You Get</h3>
+            <ul className="mt-3 space-y-2 text-sm text-gray-700">
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-success-600 mt-0.5 shrink-0" />
+                <span>{modules.length} structured modules</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-success-600 mt-0.5 shrink-0" />
+                <span>{totalLessons} lessons with trackable progress</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-success-600 mt-0.5 shrink-0" />
+                <span>Access to members, leaderboards, and private discussions</span>
+              </li>
+            </ul>
+          </div>
+        </Card>
+
+        <aside className="lg:sticky lg:top-[84px] self-start">
+          <Card className="overflow-hidden">
+            <div className="h-36 bg-black">
+              {course.coverImage ? (
+                <img src={course.coverImage} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-primary-500 to-primary-700" />
+              )}
+            </div>
+            <div className="p-4">
+              <h3 className="text-2xl font-semibold text-gray-900">{course.community?.name || course.title}</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                {course.community?.slug ? `makteb.com/${course.community.slug}` : `makteb.com/course/${course.id}`}
+              </p>
+              <p className="text-sm text-gray-700 mt-4 leading-relaxed line-clamp-4">{description}</p>
+
+              <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <p className="text-xl font-semibold text-gray-900">{memberCount.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500">Members</p>
+                </div>
+                <div>
+                  <p className="text-xl font-semibold text-gray-900">{enrollmentCount.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500">Enrolled</p>
+                </div>
+                <div>
+                  <p className="text-xl font-semibold text-gray-900">{modules.length}</p>
+                  <p className="text-xs text-gray-500">Modules</p>
+                </div>
+              </div>
+
+              <Button
+                className="w-full mt-4 bg-[#e6c66e] text-gray-900 hover:bg-[#d8b963] focus-visible:ring-yellow-500 font-semibold"
+                onClick={onEnroll}
+                isLoading={isEnrolling}
+              >
+                {ctaLabel}
+              </Button>
+            </div>
+          </Card>
+        </aside>
+      </div>
+    </div>
+  );
 }
 
 export function CoursePage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
 
   const [postTitle, setPostTitle] = useState('');
@@ -52,7 +189,7 @@ export function CoursePage() {
   const [postCategory, setPostCategory] = useState('GENERAL');
   const [activeCategory, setActiveCategory] = useState('ALL');
 
-  const requestedTab = searchParams.get('tab') || 'community';
+  const requestedTab = searchParams.get('tab');
 
   const { data: course, isLoading: courseLoading } = useQuery({
     queryKey: ['course-shell', id],
@@ -63,14 +200,14 @@ export function CoursePage() {
     enabled: !!id,
   });
 
-  const { data: progress } = useQuery({
+  const { data: progress, isLoading: progressLoading } = useQuery({
     queryKey: ['course-progress', id, user?.id],
     queryFn: async () => {
       try {
         const { data } = await api.get(`/courses/${id}/progress`);
         return data.enrollment;
       } catch (err) {
-        if (axios.isAxiosError(err) && [401, 404].includes(err.response?.status || 0)) return null;
+        if (axios.isAxiosError(err) && [401, 402, 404].includes(err.response?.status || 0)) return null;
         throw err;
       }
     },
@@ -79,16 +216,18 @@ export function CoursePage() {
   });
 
   const isEnrolled = Boolean(progress);
-  const availableTabs = useMemo(() => getAvailableTabs(isEnrolled), [isEnrolled]);
-  const activeTab = availableTabs.some((tab) => tab.id === requestedTab) ? requestedTab : 'community';
+  const availableTabs = useMemo(() => COURSE_TABS, []);
+  const defaultTab = availableTabs[0]?.id || 'community';
+  const activeTab = availableTabs.some((tab) => tab.id === requestedTab) ? requestedTab : defaultTab;
 
   useEffect(() => {
+    if (!isEnrolled) return;
     if (requestedTab !== activeTab) {
       const next = new URLSearchParams(searchParams);
       next.set('tab', activeTab);
       setSearchParams(next, { replace: true });
     }
-  }, [activeTab, requestedTab, searchParams, setSearchParams]);
+  }, [activeTab, isEnrolled, requestedTab, searchParams, setSearchParams]);
 
   const communityId = course?.community?.id;
 
@@ -102,7 +241,7 @@ export function CoursePage() {
       const { data } = await api.get(`/posts/community/${communityId}?${params}`);
       return data.posts;
     },
-    enabled: !!communityId && activeTab === 'community',
+    enabled: !!communityId && isEnrolled && activeTab === 'community',
   });
 
   const { data: members } = useQuery({
@@ -111,7 +250,7 @@ export function CoursePage() {
       const { data } = await api.get(`/communities/${communityId}/members`);
       return data.members;
     },
-    enabled: !!communityId,
+    enabled: !!communityId && isEnrolled,
   });
 
   const { data: leaderboard, isLoading: leaderboardLoading } = useQuery({
@@ -120,7 +259,7 @@ export function CoursePage() {
       const { data } = await api.get(`/gamification/leaderboard/${communityId}`);
       return data.leaderboard;
     },
-    enabled: !!communityId,
+    enabled: !!communityId && isEnrolled,
   });
 
   const enrollMutation = useMutation({
@@ -187,7 +326,20 @@ export function CoursePage() {
     enrollMutation.mutate();
   }
 
-  if (courseLoading || !course) return <PageSpinner />;
+  if (authLoading || courseLoading) return <PageSpinner />;
+  if (!course) return <PageSpinner />;
+  if (user && progressLoading) return <PageSpinner />;
+
+  if (!isEnrolled) {
+    return (
+      <CourseEnrollmentPage
+        course={course}
+        onEnroll={handleEnroll}
+        isEnrolling={enrollMutation.isPending}
+        isLoggedIn={Boolean(user)}
+      />
+    );
+  }
 
   return (
     <div className="min-h-[calc(100dvh-3.5rem)] bg-[#f5f5f5]">
@@ -215,18 +367,6 @@ export function CoursePage() {
           <div className="space-y-4">
             {activeTab === 'community' && (
               <>
-                {!isEnrolled && (
-                  <Card className="p-5">
-                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
-                      <Lock className="w-4 h-4" />
-                      Enroll to unlock all tabs and features.
-                    </div>
-                    <Button onClick={handleEnroll} isLoading={enrollMutation.isPending}>
-                      Enroll to unlock
-                    </Button>
-                  </Card>
-                )}
-
                 {isEnrolled && user && (
                   <PostComposer
                     user={user}

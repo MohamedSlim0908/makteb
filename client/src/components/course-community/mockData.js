@@ -59,6 +59,46 @@ export function getMemberLocation(seed) {
   return WORLD_COORDINATES[hash % WORLD_COORDINATES.length];
 }
 
+function formatHourLabel(hour) {
+  const normalized = ((hour % 24) + 24) % 24;
+  const suffix = normalized >= 12 ? 'pm' : 'am';
+  const hour12 = normalized % 12 || 12;
+  return `${hour12}${suffix}`;
+}
+
+function createCalendarEvent({
+  id,
+  date,
+  startHour,
+  durationHours = 1,
+  title,
+  description,
+  link,
+  marker = 'EVENT',
+  timezoneLabel = 'Local time',
+  coverImage = null,
+}) {
+  const startAt = new Date(date);
+  startAt.setHours(startHour, 0, 0, 0);
+
+  const endAt = new Date(startAt);
+  endAt.setHours(startAt.getHours() + durationHours);
+
+  return {
+    id,
+    date: new Date(date.getFullYear(), date.getMonth(), date.getDate()),
+    time: formatHourLabel(startHour),
+    startAt,
+    endAt,
+    title,
+    description,
+    link,
+    marker,
+    timezoneLabel,
+    coverImage,
+  };
+}
+
 export function getMockCalendarEvents(referenceDate) {
   const month = referenceDate.getMonth();
   const year = referenceDate.getFullYear();
@@ -70,21 +110,37 @@ export function getMockCalendarEvents(referenceDate) {
 
     const weekDay = date.getDay();
     if (weekDay === 2) {
-      events.push({
-        id: `${year}-${month + 1}-${day}-qa`,
-        date,
-        time: day % 2 === 0 ? '5pm' : '4pm',
-        title: 'LIVE Q&A',
-      });
+      const startHour = day % 2 === 0 ? 17 : 16;
+      events.push(
+        createCalendarEvent({
+          id: `${year}-${month + 1}-${day}-qa`,
+          date,
+          startHour,
+          durationHours: 1,
+          title: 'LIVE Q&A',
+          description:
+            'Bring your latest questions and blockers. We will review member submissions live and share actionable next steps.',
+          link: 'https://meet.google.com/',
+          marker: 'Q&A',
+        })
+      );
     }
 
     if (weekDay === 4) {
-      events.push({
-        id: `${year}-${month + 1}-${day}-feedback`,
-        date,
-        time: day % 2 === 0 ? '5pm' : '4pm',
-        title: 'Editing Feedback',
-      });
+      const startHour = day % 2 === 0 ? 17 : 16;
+      events.push(
+        createCalendarEvent({
+          id: `${year}-${month + 1}-${day}-feedback`,
+          date,
+          startHour,
+          durationHours: 1,
+          title: 'Editing Feedback',
+          description:
+            'Submit your draft before the session to get practical, scene-by-scene feedback and improve your next cut.',
+          link: 'https://meet.google.com/',
+          marker: 'FEEDBACK',
+        })
+      );
     }
   }
 
@@ -93,11 +149,12 @@ export function getMockCalendarEvents(referenceDate) {
 
 export function findUpcomingEvent(events, now = new Date()) {
   const upcoming = events
-    .filter((event) => event.date.getTime() > now.getTime())
-    .sort((a, b) => a.date.getTime() - b.date.getTime())[0];
+    .filter((event) => (event.startAt || event.date).getTime() > now.getTime())
+    .sort((a, b) => (a.startAt || a.date).getTime() - (b.startAt || b.date).getTime())[0];
 
   if (!upcoming) return null;
 
-  const hoursUntil = Math.max(1, Math.round((upcoming.date.getTime() - now.getTime()) / 3_600_000));
+  const eventStart = upcoming.startAt || upcoming.date;
+  const hoursUntil = Math.max(1, Math.round((eventStart.getTime() - now.getTime()) / 3_600_000));
   return { ...upcoming, hoursUntil };
 }

@@ -20,6 +20,47 @@ const CATEGORIES = [
   { name: 'Self-improvement', icon: '📚' },
 ];
 
+const CATEGORY_KEYWORDS = {
+  Hobbies: ['hobby', 'art', 'craft', 'diy', 'painting', 'photography', 'gaming', 'travel'],
+  Music: ['music', 'song', 'guitar', 'piano', 'singer', 'producer', 'audio', 'beat'],
+  Money: ['money', 'finance', 'investing', 'trading', 'business', 'entrepreneur', 'sales', 'marketing'],
+  Spirituality: ['spiritual', 'mindfulness', 'meditation', 'faith', 'prayer', 'quran', 'islam', 'soul'],
+  Tech: ['tech', 'software', 'code', 'coding', 'developer', 'programming', 'ai', 'data'],
+  Health: ['health', 'fitness', 'wellness', 'nutrition', 'diet', 'mental health', 'workout', 'gym'],
+  Sports: ['sport', 'football', 'soccer', 'basketball', 'tennis', 'pickleball', 'athlete', 'running'],
+  'Self-improvement': ['self improvement', 'productivity', 'mindset', 'habits', 'growth', 'career', 'learning'],
+};
+
+function normalizeCategory(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, '-');
+}
+
+function extractCommunityCategories(community) {
+  const rawCategoryValues = [
+    community.category,
+    ...(Array.isArray(community.categories) ? community.categories : []),
+    ...(Array.isArray(community.tags) ? community.tags : []),
+    ...(Array.isArray(community.topics) ? community.topics : []),
+  ].filter(Boolean);
+
+  return new Set(rawCategoryValues.map((value) => normalizeCategory(value)));
+}
+
+function matchesCategory(community, activeCategory) {
+  if (activeCategory === 'All') return true;
+
+  const normalizedActive = normalizeCategory(activeCategory);
+  const explicitCategories = extractCommunityCategories(community);
+  if (explicitCategories.has(normalizedActive)) return true;
+
+  const text = `${community.name || ''} ${community.description || ''}`.toLowerCase();
+  const keywords = CATEGORY_KEYWORDS[activeCategory] || [];
+  return keywords.some((keyword) => text.includes(keyword.toLowerCase()));
+}
+
 export function DiscoverPage() {
   const [searchInput, setSearchInput] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
@@ -38,11 +79,12 @@ export function DiscoverPage() {
   const communities = communitiesData?.communities ?? [];
 
   const filteredCommunities = communities.filter((community) => {
-    const searchLower = searchInput.toLowerCase();
+    const searchLower = searchInput.trim().toLowerCase();
     const matchesSearch =
+      !searchLower ||
       community.name?.toLowerCase().includes(searchLower) ||
       community.description?.toLowerCase().includes(searchLower);
-    return matchesSearch;
+    return matchesSearch && matchesCategory(community, activeCategory);
   });
 
   return (
@@ -112,7 +154,7 @@ export function DiscoverPage() {
             {filteredCommunities.map((community, index) => (
               <Link
                 key={community.id}
-                to={`/community/${community.slug || community.id}`}
+                to={`/community/${community.slug || community.id}?tab=about`}
                 className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-card hover:shadow-card-hover hover:border-gray-300 transition-all duration-300 flex flex-col group"
               >
                 <div className="h-44 relative overflow-hidden bg-gray-100">

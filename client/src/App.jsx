@@ -16,6 +16,11 @@ const CoursePage = lazy(() => import('./pages/CoursePage').then(m => ({ default:
 const CourseLearnPage = lazy(() => import('./pages/CourseLearnPage').then(m => ({ default: m.CourseLearnPage })));
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const CreatorLandingPage = lazy(() => import('./pages/CreatorLandingPage').then(m => ({ default: m.CreatorLandingPage })));
+const CreatorPricingPage = lazy(() => import('./pages/CreatorPricingPage').then(m => ({ default: m.CreatorPricingPage })));
+const CreatorCommunityDashboardPage = lazy(() =>
+  import('./pages/CreatorCommunityDashboardPage').then(m => ({ default: m.CreatorCommunityDashboardPage }))
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,7 +39,8 @@ export default function App() {
           <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin" /></div>}>
             <Routes>
               <Route element={<AppLayout />}>
-                <Route path="/" element={<LandingPage />} />
+                <Route path="/" element={<Navigate to="/discover" replace />} />
+                <Route path="/landing" element={<LandingPage />} />
                 <Route path="/discover" element={<DiscoverPage />} />
                 <Route path="/community/:slug" element={<CommunityPage />} />
                 <Route path="/post/:id" element={<PostPage />} />
@@ -46,6 +52,12 @@ export default function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/auth/callback" element={<AuthCallbackPage />} />
+              <Route path="/creator" element={<CreatorLandingPage />} />
+              <Route path="/creator/pricing" element={<CreatorPricingPage />} />
+              <Route path="/creator/community" element={<CreatorCommunityDashboardPage />} />
+              <Route path="/sell-your-course" element={<Navigate to="/creator" replace />} />
+              <Route path="/sell-your-course/pricing" element={<Navigate to="/creator/pricing" replace />} />
+              <Route path="/sell-your-course/community" element={<Navigate to="/creator/community" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>

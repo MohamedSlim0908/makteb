@@ -20,7 +20,7 @@ import { Avatar } from '../ui/Avatar';
 
 export function Navbar() {
   const { user, logout } = useAuth();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
 
   const courseMatch1 = useMatch('/course/:id');
   const courseMatch2 = useMatch('/course/:id/*');
@@ -34,7 +34,7 @@ export function Navbar() {
   const isCourseRoute = pathname.startsWith('/course/');
   const isCommunityRoute = pathname.startsWith('/community/');
   const isCommunityShellRoute = isCourseRoute || isCommunityRoute;
-  const isLanding = pathname === '/';
+  const isLanding = pathname === '/landing';
 
   const [isBrandMenuOpen, setIsBrandMenuOpen] = useState(false);
   const [brandMenuSearch, setBrandMenuSearch] = useState('');
@@ -64,6 +64,18 @@ export function Navbar() {
     enabled: Boolean(communitySlug),
     staleTime: 120_000,
   });
+  const communityId = communityBrand?.id;
+
+  const { data: communityMembership } = useQuery({
+    queryKey: ['navbar-community-membership', communityId, user?.id],
+    queryFn: async () => {
+      const { data } = await api.get(`/communities/${communityId}/membership`);
+      return data.membership ?? null;
+    },
+    enabled: Boolean(user) && Boolean(communityId) && isCommunityRoute,
+    staleTime: 60_000,
+    retry: false,
+  });
 
   const { data: enrolledCourses = [], isLoading: enrolledCoursesLoading } = useQuery({
     queryKey: ['navbar-enrolled-courses', user?.id],
@@ -71,7 +83,7 @@ export function Navbar() {
       const { data } = await api.get('/courses/enrolled/me');
       return data.enrolledCourses ?? [];
     },
-    enabled: Boolean(user) && !isCommunityShellRoute,
+    enabled: Boolean(user),
     staleTime: 120_000,
   });
 
@@ -113,7 +125,7 @@ export function Navbar() {
   }
 
   const brandLinks = [
-    { to: user ? '/dashboard' : '/login', label: 'Create a Community', icon: Plus },
+    { to: '/creator', label: 'Create a Community', icon: Plus },
     { to: '/discover', label: 'Discover', icon: Compass },
     { to: user ? '/settings' : '/login', label: 'Settings', icon: Settings },
   ];
@@ -145,20 +157,191 @@ export function Navbar() {
       ? `/community/${communitySlug}`
       : '/discover';
 
+  const communityTabs = [
+    { id: 'community', label: 'Community' },
+    { id: 'classroom', label: 'Classroom' },
+    { id: 'calendar', label: 'Calendar' },
+    { id: 'members', label: 'Members' },
+    { id: 'leaderboards', label: 'Leaderboards' },
+    { id: 'about', label: 'About' },
+  ];
+  const isCommunityMember = communityMembership?.status
+    ? communityMembership.status === 'ACTIVE'
+    : Boolean(communityMembership);
+  const availableCommunityTabs = isCommunityMember
+    ? communityTabs
+    : communityTabs.filter((tab) => tab.id === 'about');
+  const requestedCommunityTab = new URLSearchParams(search).get('tab');
+  const defaultCommunityTab = availableCommunityTabs[0]?.id || 'about';
+  const activeCommunityTab = availableCommunityTabs.some((tab) => tab.id === requestedCommunityTab)
+    ? requestedCommunityTab
+    : defaultCommunityTab;
+
+  function renderUserDropdown() {
+    if (!user || !isUserMenuOpen) return null;
+
+    return (
+      <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-dropdown border border-gray-200 py-1 animate-scale-in z-50">
+        <div className="px-4 py-3 border-b border-gray-100">
+          <p className="font-medium text-gray-900 truncate text-sm">{user.email}</p>
+        </div>
+
+        <Link
+          to="/dashboard"
+          onClick={() => setIsUserMenuOpen(false)}
+          className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          Profile
+        </Link>
+        <Link
+          to="/settings"
+          onClick={() => setIsUserMenuOpen(false)}
+          className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          Settings
+        </Link>
+        <button
+          type="button"
+          disabled
+          className="block w-full text-left px-4 py-2.5 text-sm text-gray-400 cursor-not-allowed"
+        >
+          Affiliates
+        </button>
+
+        <div className="my-1 border-t border-gray-100" />
+
+        <button
+          type="button"
+          disabled
+          className="block w-full text-left px-4 py-2.5 text-sm text-gray-400 cursor-not-allowed"
+        >
+          Help center
+        </button>
+        <Link
+          to="/dashboard"
+          onClick={() => setIsUserMenuOpen(false)}
+          className="block px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors"
+        >
+          Create a community
+        </Link>
+        <Link
+          to="/discover"
+          onClick={() => setIsUserMenuOpen(false)}
+          className="block px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors"
+        >
+          Discover communities
+        </Link>
+
+        <div className="border-t border-gray-100 mt-1 pt-1">
+          <button
+            onClick={logout}
+            className="block w-full text-left px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors"
+          >
+            Log out
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Community/Course shell navbar
   if (isCommunityShellRoute) {
-    return (
-      <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 h-14">
-        <div className="max-w-[1220px] mx-auto px-4 h-full flex items-center gap-4">
-          <Link to={communityShellHome} className="flex items-center gap-2 min-w-0 shrink-0">
-            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-              <Globe className="w-4 h-4" />
-            </div>
-            <span className="font-semibold text-gray-900 truncate max-w-[200px] text-sm">{brandName}</span>
-          </Link>
+    const communityTabBase = communitySlug ? `/community/${communitySlug}` : '/discover';
 
-          <div className="hidden md:block flex-1">
-            <div className="relative max-w-[480px] mx-auto">
+    return (
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div className="appContainer h-12 flex items-center gap-4">
+          <div className="flex items-center gap-2 min-w-0 shrink-0">
+            <Link to={communityShellHome} className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                <Globe className="w-4 h-4" />
+              </div>
+            </Link>
+
+            <div ref={brandMenuRef} className="relative hidden md:block">
+              <button
+                type="button"
+                onClick={() => setIsBrandMenuOpen((open) => !open)}
+                aria-expanded={isBrandMenuOpen}
+                className="flex items-center gap-1 text-gray-900 hover:text-primary-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-md px-1.5 py-1"
+              >
+                <span className="font-semibold text-sm truncate max-w-[220px]">{brandName}</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isBrandMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isBrandMenuOpen && (
+                <div className="absolute left-0 mt-2 w-72 bg-white rounded-xl shadow-dropdown border border-gray-200 p-2 z-50 animate-scale-in">
+                  <div className="px-1 pb-2">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="text"
+                        value={brandMenuSearch}
+                        onChange={(e) => setBrandMenuSearch(e.target.value)}
+                        placeholder="Search menu"
+                        className="w-full h-9 rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {filteredBrandLinks.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.label}
+                        to={item.to}
+                        onClick={() => { setIsBrandMenuOpen(false); setBrandMenuSearch(''); }}
+                        className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
+                          <Icon className="w-4 h-4" />
+                        </span>
+                        <span className="font-medium">{item.label}</span>
+                      </Link>
+                    );
+                  })}
+
+                  {user && (
+                    <div className="px-1 pt-1">
+                      <div className="my-1 border-t border-gray-100" />
+                      <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                        Enrolled courses
+                      </p>
+                      {enrolledCoursesLoading ? (
+                        <div className="px-2 py-2 text-sm text-gray-400">Loading...</div>
+                      ) : filteredEnrolledCourseLinks.length === 0 ? (
+                        <div className="px-2 py-2 text-sm text-gray-400">
+                          {normalizedMenuSearch ? 'No courses found.' : 'No enrolled courses yet.'}
+                        </div>
+                      ) : (
+                        filteredEnrolledCourseLinks.map((course) => (
+                          <Link
+                            key={course.id}
+                            to={course.to}
+                            onClick={() => { setIsBrandMenuOpen(false); setBrandMenuSearch(''); }}
+                            className={`flex items-start gap-3 rounded-lg px-2 py-2 text-sm text-gray-700 transition-colors ${
+                              pathname.startsWith(`/course/${course.id}`) ? 'bg-gray-50' : 'hover:bg-gray-50'
+                            }`}
+                          >
+                            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
+                              <BookOpen className="w-4 h-4" />
+                            </span>
+                            <span className="min-w-0">
+                              <span className="block truncate font-medium">{course.label}</span>
+                              <span className="block truncate text-xs text-gray-400">{course.subtitle}</span>
+                            </span>
+                          </Link>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="hidden md:flex flex-1 justify-center">
+            <div className="relative w-full max-w-[520px]">
               <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 value={shellSearch}
@@ -170,6 +353,9 @@ export function Navbar() {
           </div>
 
           <div className="ml-auto flex items-center gap-1.5">
+            <button className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors">
+              <Search className="w-[18px] h-[18px]" />
+            </button>
             {user ? (
               <>
                 <button className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors">
@@ -179,7 +365,15 @@ export function Navbar() {
                   <Bell className="w-[18px] h-[18px]" />
                   <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
                 </button>
-                <Avatar src={user.avatar} name={user.name} size="sm" className="ml-1" />
+                <div ref={userMenuRef} className="relative ml-1">
+                  <button
+                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    className="flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-full"
+                  >
+                    <Avatar src={user.avatar} name={user.name} size="sm" />
+                  </button>
+                  {renderUserDropdown()}
+                </div>
               </>
             ) : (
               <Link
@@ -191,7 +385,29 @@ export function Navbar() {
             )}
           </div>
         </div>
-      </nav>
+
+        {isCommunityRoute && (
+          <div className="border-t border-gray-100">
+            <div className="appContainer">
+              <div className="flex items-center gap-4 overflow-x-auto no-scrollbar">
+                {availableCommunityTabs.map((tab) => (
+                  <Link
+                    key={tab.id}
+                    to={`${communityTabBase}?tab=${tab.id}`}
+                    className={`px-1 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                      activeCommunityTab === tab.id
+                        ? 'border-gray-900 text-gray-900'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    {tab.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </header>
     );
   }
 
@@ -200,7 +416,7 @@ export function Navbar() {
     <nav className={`sticky top-0 z-50 h-14 border-b transition-colors ${
       isLanding ? 'bg-white/80 backdrop-blur-lg border-gray-200/60' : 'bg-white border-gray-200'
     }`}>
-      <div className="max-w-[1400px] mx-auto px-4 h-full flex items-center justify-between gap-4">
+      <div className="appContainer h-full flex items-center justify-between gap-4">
         {/* Left */}
         <div className="flex items-center gap-3 min-w-fit">
           <Link to="/" className="flex items-center gap-2">
@@ -320,31 +536,7 @@ export function Navbar() {
                 >
                   <Avatar src={user.avatar} name={user.name} size="sm" />
                 </button>
-                {isUserMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-dropdown border border-gray-200 py-1 animate-scale-in z-50">
-                    <div className="px-4 py-3 border-b border-gray-100">
-                      <p className="font-medium text-gray-900 truncate text-sm">{user.name}</p>
-                      <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                    </div>
-                    <Link to="/dashboard" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                      Dashboard
-                    </Link>
-                    <Link to="/settings" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                      Settings
-                    </Link>
-                    <Link to="/discover" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors md:hidden">
-                      Discover
-                    </Link>
-                    <div className="border-t border-gray-100 mt-1 pt-1">
-                      <button
-                        onClick={logout}
-                        className="block w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-gray-50 transition-colors"
-                      >
-                        Log out
-                      </button>
-                    </div>
-                  </div>
-                )}
+                {renderUserDropdown()}
               </div>
 
               {/* Mobile menu button */}
