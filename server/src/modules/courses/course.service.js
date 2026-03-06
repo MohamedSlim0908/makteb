@@ -2,6 +2,7 @@ import { prisma } from '../../lib/prisma.js';
 import { AppError } from '../../middleware/error-handler.js';
 import { USER_PUBLIC_SELECT } from '../../lib/db-selects.js';
 import { awardPoints } from '../gamification/gamification.service.js';
+import { sendNotification } from '../notifications/notification.service.js';
 
 export async function listCourses({ search, page, skip, take }) {
   const where = { published: true };
@@ -125,7 +126,7 @@ export async function createCourse(creatorId, { communityId, title, description,
   }
 
   return prisma.course.create({
-    data: { communityId, creatorId, title, description, price: price || null, coverImage },
+    data: { communityId, creatorId, title, description, price: price || null, coverImage, published: true },
     include: {
       creator: { select: USER_PUBLIC_SELECT },
       _count: { select: { modules: true, enrollments: true } },
@@ -201,6 +202,15 @@ export async function enrollInCourse(userId, courseId) {
 
   const enrollment = await prisma.enrollment.create({ data: { userId, courseId } });
   await awardPoints(userId, course.communityId, 10, 'Enrolled in a course');
+
+  if (course.creatorId !== userId) {
+    await sendNotification(course.creatorId, {
+      title: 'New enrollment',
+      body: `Someone enrolled in your course "${course.title}"`,
+      link: `/course/${courseId}`,
+    });
+  }
+
   return enrollment;
 }
 
