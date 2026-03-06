@@ -3,7 +3,6 @@ export const COURSE_TABS = [
   { id: 'classroom', label: 'Classroom' },
   { id: 'calendar', label: 'Calendar' },
   { id: 'members', label: 'Members' },
-  { id: 'map', label: 'Map' },
   { id: 'leaderboards', label: 'Leaderboards' },
   { id: 'about', label: 'About' },
 ];

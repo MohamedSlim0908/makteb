@@ -3,6 +3,7 @@ import { getIO } from '../../lib/socket.js';
 import { AppError } from '../../middleware/error-handler.js';
 import { USER_PUBLIC_SELECT, MODERATOR_ROLES } from '../../lib/db-selects.js';
 import { awardPoints } from '../gamification/gamification.service.js';
+import { sendNotification } from '../notifications/notification.service.js';
 
 export async function listCommunityPosts(communityId, { skip, take, page, category, viewerUserId }) {
   const where = { communityId };
@@ -169,6 +170,15 @@ export async function toggleLike(userId, postId) {
 
   await prisma.like.create({ data: { postId, userId } });
   await awardPoints(userId, post.communityId, 1, 'Liked a post');
+
+  if (post.authorId !== userId) {
+    await sendNotification(post.authorId, {
+      title: 'Someone liked your post',
+      body: `Your post "${post.title}" received a new like`,
+      link: `/community/${post.communityId}/post/${postId}`,
+    });
+  }
+
   return { liked: true };
 }
 
@@ -195,6 +205,14 @@ export async function addComment(authorId, postId, { content, parentId }) {
 
   await awardPoints(authorId, post.communityId, 2, 'Commented on a post');
   getIO().to(`community:${post.communityId}`).emit('comment:created', { postId, comment });
+
+  if (post.authorId !== authorId) {
+    await sendNotification(post.authorId, {
+      title: 'New comment on your post',
+      body: `Someone commented on "${post.title}"`,
+      link: `/community/${post.communityId}/post/${postId}`,
+    });
+  }
 
   return comment;
 }

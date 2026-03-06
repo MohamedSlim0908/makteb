@@ -1,0 +1,13 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '../../lib/api';
+
+export function useJoinCommunity(communityId, slug) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post(`/communities/${communityId}/join`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['membership', communityId] });
+      qc.invalidateQueries({ queryKey: ['community', slug] });
+    },
+  });
+}

@@ -2,6 +2,7 @@ import slugify from 'slug';
 import { prisma } from '../../lib/prisma.js';
 import { AppError } from '../../middleware/error-handler.js';
 import { USER_PUBLIC_SELECT, MODERATOR_ROLES } from '../../lib/db-selects.js';
+import { sendNotification } from '../notifications/notification.service.js';
 
 const DEFAULT_COMMUNITY_LEVELS = [
   { name: 'Newcomer', minPoints: 0, order: 1 },
@@ -11,13 +12,16 @@ const DEFAULT_COMMUNITY_LEVELS = [
   { name: 'Legend', minPoints: 1000, order: 5 },
 ];
 
-export async function listCommunities({ search, page, skip, take }) {
+export async function listCommunities({ search, category, page, skip, take }) {
   const where = { visibility: 'PUBLIC' };
   if (search) {
     where.OR = [
       { name: { contains: search, mode: 'insensitive' } },
       { description: { contains: search, mode: 'insensitive' } },
     ];
+  }
+  if (category) {
+    where.category = category;
   }
 
   const [communities, total] = await Promise.all([
@@ -50,7 +54,7 @@ export async function getCommunityBySlug(slug) {
 }
 
 
-export async function createCommunity(userId, { name, description, visibility, price, coverImage }) {
+export async function createCommunity(userId, { name, description, visibility, price, coverImage, category }) {
   let communitySlug = slugify(name, { lower: true });
   const existing = await prisma.community.findUnique({ where: { slug: communitySlug } });
   if (existing) communitySlug += '-' + Date.now().toString(36);
@@ -60,6 +64,7 @@ export async function createCommunity(userId, { name, description, visibility, p
       name,
       slug: communitySlug,
       description,
+      category: category || null,
       visibility: visibility || 'PUBLIC',
       price: price || null,
       coverImage,
@@ -116,6 +121,14 @@ export async function joinCommunity(userId, communityId) {
   }
 
   await prisma.communityMember.create({ data: { userId, communityId } });
+
+  if (community.creatorId !== userId) {
+    await sendNotification(community.creatorId, {
+      title: 'New member joined',
+      body: `Someone joined your community "${community.name}"`,
+      link: `/community/${community.slug}`,
+    });
+  }
 
   const publishedFreeCourses = await prisma.course.findMany({
     where: {

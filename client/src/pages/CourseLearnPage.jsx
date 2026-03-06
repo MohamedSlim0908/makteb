@@ -1,59 +1,28 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronDown, ChevronRight, Play, ArrowLeft } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Play, ArrowLeft, CircleCheck } from 'lucide-react';
 import { Button } from '../components/ui/Button';
-import { Avatar } from '../components/ui/Avatar';
-import { Card } from '../components/ui/Card';
 import { PageSpinner } from '../components/ui/Spinner';
 import { EmptyState } from '../components/ui/EmptyState';
-import axios from 'axios';
-import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
+import { useCourse } from '../features/courses/useCourse';
+import { useCourseProgress } from '../features/courses/useCourseProgress';
+import { useCompleteLesson } from '../features/courses/useCompleteLesson';
 
 export function CourseLearnPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const [expandedModules, setExpandedModules] = useState({});
   const [currentLessonId, setCurrentLessonId] = useState(null);
 
-  const { data: course, isLoading: courseLoading } = useQuery({
-    queryKey: ['course', id],
-    queryFn: async () => {
-      const { data } = await api.get(`/courses/${id}`);
-      return data.course;
-    },
-    enabled: !!id,
-  });
+  const { data: course, isLoading: courseLoading } = useCourse(id);
 
-  const { data: progress } = useQuery({
-    queryKey: ['course-progress', id],
-    queryFn: async () => {
-      try {
-        const { data } = await api.get(`/courses/${id}/progress`);
-        return data.enrollment;
-      } catch (err) {
-        if (axios.isAxiosError(err) && err.response?.status === 404) return null;
-        throw err;
-      }
-    },
-    enabled: !!id,
-    retry: false,
-  });
+  const { data: progress } = useCourseProgress(id, user?.id);
 
-  const completeMutation = useMutation({
-    mutationFn: (lessonId) => api.post(`/lessons/${lessonId}/complete`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['course-progress', id] });
-      toast.success('Lesson completed!');
-    },
-    onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to mark complete'),
-  });
+  const completeMutation = useCompleteLesson(id);
 
-  if (!user) { navigate('/login'); return null; }
   if (courseLoading || !course) return <PageSpinner />;
 
   const isEnrolled = !!progress;
@@ -65,21 +34,19 @@ export function CourseLearnPage() {
 
   if (!isEnrolled) {
     return (
-      <div className="min-h-[calc(100dvh-3.5rem)] bg-[#f5f5f5] flex items-center justify-center px-4">
-        <Card className="max-w-lg w-full">
-          <div className="p-8">
-            <EmptyState
-              title={course.title}
-              description="You need to enroll from the course community page before accessing lessons."
-              action={
-                <Button onClick={() => navigate(`/course/${id}`)}>
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Go to Course Community
-                </Button>
-              }
-            />
-          </div>
-        </Card>
+      <div className="min-h-[calc(100dvh-3.5rem)] bg-white flex items-center justify-center px-4">
+        <div className="max-w-md w-full text-center">
+          <EmptyState
+            title={course.title}
+            description="You need to enroll from the course page before accessing lessons."
+            action={
+              <Button onClick={() => navigate(`/course/${id}`)}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Go to Course
+              </Button>
+            }
+          />
+        </div>
       </div>
     );
   }
@@ -92,28 +59,28 @@ export function CourseLearnPage() {
   const effectiveLesson = course.modules.flatMap((m) => m.lessons).find((l) => l.id === effectiveLessonId);
 
   return (
-    <div className="min-h-[calc(100dvh-3.5rem)] bg-[#f5f5f5] flex">
+    <div className="min-h-[calc(100dvh-3.5rem)] bg-white flex">
       {/* Sidebar */}
-      <aside className="w-72 bg-white border-r border-gray-200 flex-shrink-0 overflow-y-auto hidden md:block">
+      <aside className="w-72 bg-white border-r border-gray-200 flex-shrink-0 overflow-y-auto hidden md:flex md:flex-col">
         <div className="p-4 border-b border-gray-200">
-          <h2 className="font-semibold text-gray-900 truncate text-sm">{course.title}</h2>
-          <Link to={`/course/${id}`} className="text-xs text-primary-600 hover:text-primary-700 font-medium">
+          <h2 className="font-bold text-gray-900 truncate text-sm">{course.title}</h2>
+          <Link to={`/course/${id}`} className="text-xs text-gray-500 hover:text-gray-900 font-medium mt-0.5 block">
             Back to Community
           </Link>
         </div>
 
-        {/* Progress bar */}
+        {/* Progress */}
         <div className="px-4 py-3 border-b border-gray-100">
           <div className="flex items-center justify-between text-xs text-gray-500 mb-1.5">
-            <span>Progress</span>
-            <span>{progressPercent}%</span>
+            <span>{completedCount}/{totalLessons} complete</span>
+            <span className="font-semibold text-gray-900">{progressPercent}%</span>
           </div>
-          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-            <div className="h-full bg-primary-600 transition-all rounded-full" style={{ width: `${progressPercent}%` }} />
+          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-full bg-gray-900 transition-all rounded-full" style={{ width: `${progressPercent}%` }} />
           </div>
         </div>
 
-        <nav className="p-2">
+        <nav className="p-2 flex-1 overflow-y-auto">
           {course.modules
             .sort((a, b) => a.order - b.order)
             .map((mod) => {
@@ -123,7 +90,7 @@ export function CourseLearnPage() {
                 <div key={mod.id} className="mb-1">
                   <button
                     onClick={() => toggleModule(mod.id)}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-semibold text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
                   >
                     {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-gray-400" /> : <ChevronRight className="w-3.5 h-3.5 text-gray-400" />}
                     <span className="truncate">{mod.title}</span>
@@ -136,12 +103,12 @@ export function CourseLearnPage() {
                             onClick={() => setCurrentLessonId(lesson.id)}
                             className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm rounded-lg transition-colors ${
                               effectiveLessonId === lesson.id
-                                ? 'bg-primary-50 text-primary-700 font-medium'
+                                ? 'bg-gray-100 text-gray-900 font-medium'
                                 : 'text-gray-600 hover:bg-gray-50'
                             }`}
                           >
                             {completedIds.has(lesson.id) ? (
-                              <Check className="w-4 h-4 text-success-600 flex-shrink-0" />
+                              <CircleCheck className="w-4 h-4 text-green-500 flex-shrink-0" />
                             ) : (
                               <Play className="w-4 h-4 text-gray-400 flex-shrink-0" />
                             )}
@@ -161,14 +128,13 @@ export function CourseLearnPage() {
       <main className="flex-1 flex flex-col min-w-0">
         <div className="bg-white border-b border-gray-200 px-6 py-3">
           <div className="flex items-center gap-4">
-            <Avatar src={course.creator?.avatar} name={course.creator?.name} size="sm" />
             <div className="flex-1">
-              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-primary-600 transition-all rounded-full" style={{ width: `${progressPercent}%` }} />
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-full bg-gray-900 transition-all rounded-full" style={{ width: `${progressPercent}%` }} />
               </div>
             </div>
             <span className="text-xs text-gray-500 whitespace-nowrap font-medium">
-              {completedCount} / {totalLessons} lessons
+              {completedCount}/{totalLessons}
             </span>
           </div>
         </div>
@@ -198,7 +164,7 @@ export function CourseLearnPage() {
               )}
 
               {effectiveLesson.content && (
-                <div className="max-w-none mb-6 whitespace-pre-wrap text-gray-600 leading-relaxed">
+                <div className="mb-6 whitespace-pre-wrap text-gray-600 leading-relaxed">
                   {effectiveLesson.content}
                 </div>
               )}
@@ -208,7 +174,10 @@ export function CourseLearnPage() {
               )}
 
               <Button
-                onClick={() => completeMutation.mutate(effectiveLesson.id)}
+                onClick={() => completeMutation.mutate(effectiveLesson.id, {
+                  onSuccess: () => toast.success('Lesson completed!'),
+                  onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to mark complete'),
+                })}
                 disabled={completedIds.has(effectiveLesson.id)}
                 isLoading={completeMutation.isPending}
                 variant={completedIds.has(effectiveLesson.id) ? 'secondary' : 'primary'}

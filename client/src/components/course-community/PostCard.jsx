@@ -1,13 +1,18 @@
 import { Heart, MessageCircle, Pin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Avatar } from '../ui/Avatar';
+import { PostActionMenu } from './PostActionMenu';
 
-function formatDate(value) {
-  return new Date(value).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+function timeAgo(value) {
+  const seconds = Math.floor((Date.now() - new Date(value).getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+  return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 const CATEGORY_LABELS = {
@@ -19,47 +24,71 @@ const CATEGORY_LABELS = {
   INTRODUCE_YOURSELF: 'Introduce Yourself',
 };
 
-export function PostCard({ post, onToggleLike, likePending }) {
+const MODERATOR_ROLES = ['OWNER', 'ADMIN', 'MODERATOR'];
+
+export function PostCard({ post, onToggleLike, likePending, currentUserId, memberRole, onEdit, onDelete, onTogglePin }) {
+  const isAuthor = currentUserId && (post.authorId === currentUserId || post.author?.id === currentUserId);
+  const isModerator = MODERATOR_ROLES.includes(memberRole);
   return (
-    <article className="bg-white rounded-xl border border-gray-200 p-4">
-      <div className="flex items-start justify-between">
-        <div className="flex items-start gap-3">
-          <Avatar src={post.author?.avatar} name={post.author?.name} size="sm" />
-          <div>
-            <p className="font-semibold text-gray-900">{post.author?.name}</p>
-            <p className="text-xs text-gray-500">
-              {formatDate(post.createdAt)} · {CATEGORY_LABELS[post.category] || 'General'}
-            </p>
+    <article className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:border-gray-300 transition-colors">
+      <div className="p-5">
+        {/* Author row */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <Avatar src={post.author?.avatar} name={post.author?.name} size="md" />
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-gray-900 text-sm">{post.author?.name}</span>
+                <span className="text-xs text-gray-400">{timeAgo(post.createdAt)}</span>
+              </div>
+              <span className="text-xs text-gray-500">{CATEGORY_LABELS[post.category] || 'General'}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {post.pinned && (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                <Pin className="w-3 h-3" />
+                Pinned
+              </span>
+            )}
+            <PostActionMenu
+              post={post}
+              isAuthor={isAuthor}
+              isModerator={isModerator}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onTogglePin={onTogglePin}
+            />
           </div>
         </div>
-        {post.pinned && (
-          <span className="inline-flex items-center gap-1 text-xs text-gray-500">
-            <Pin className="w-3.5 h-3.5" />
-            Pinned
-          </span>
-        )}
+
+        {/* Content */}
+        <Link to={`/post/${post.id}`} className="block group">
+          <h3 className="text-base font-bold text-gray-900 mb-1.5 group-hover:text-gray-700 transition-colors">
+            {post.title}
+          </h3>
+          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap line-clamp-3">
+            {post.content}
+          </p>
+        </Link>
       </div>
 
-      <Link to={`/post/${post.id}`} className="block mt-3">
-        <h3 className="text-lg font-bold text-gray-900 mb-2">{post.title}</h3>
-        <p className="text-sm text-gray-700 leading-6 whitespace-pre-wrap line-clamp-4">{post.content}</p>
-      </Link>
-
-      <div className="mt-4 pt-3 border-t border-gray-100 flex items-center gap-4">
+      {/* Actions */}
+      <div className="px-5 py-3 border-t border-gray-100 flex items-center gap-4">
         <button
           type="button"
           onClick={() => onToggleLike(post.id)}
           disabled={likePending}
-          className={`inline-flex items-center gap-1.5 text-sm ${
-            post.isLiked ? 'text-red-500' : 'text-gray-600 hover:text-red-500'
+          className={`inline-flex items-center gap-1.5 text-sm font-medium transition-colors ${
+            post.isLiked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'
           } disabled:opacity-60`}
         >
           <Heart className="w-4 h-4" fill={post.isLiked ? 'currentColor' : 'none'} />
-          <span>{post.likeCount}</span>
+          <span>{post.likeCount || 0}</span>
         </button>
-        <Link to={`/post/${post.id}`} className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-primary-600">
+        <Link to={`/post/${post.id}`} className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">
           <MessageCircle className="w-4 h-4" />
-          <span>{post.commentCount}</span>
+          <span>{post.commentCount || 0}</span>
         </Link>
       </div>
     </article>

@@ -2,72 +2,197 @@ import { prisma } from '../lib/prisma.js';
 import { hashPassword } from '../modules/auth/auth.utils.js';
 import { env } from '../config/env.js';
 
-const USERS = {
-  owner: {
+const USERS = [
+  {
     email: 'owner.demo@makteb.local',
     password: 'DemoPass123!',
-    name: 'Lina Owner',
+    name: 'Alex Rivera',
     role: 'CREATOR',
-    bio: 'Owner of the demo community.',
-    avatar:
-      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=320&q=80',
+    bio: 'Building communities that help creators grow. Previously ran a 50k YouTube channel.',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=320&q=80',
   },
-  admin: {
+  {
     email: 'admin.demo@makteb.local',
     password: 'DemoPass123!',
-    name: 'Youssef Admin',
+    name: 'Sarah Chen',
     role: 'ADMIN',
-    bio: 'Community admin account.',
-    avatar:
-      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=320&q=80',
+    bio: 'Community manager and content strategist. Passionate about education.',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=320&q=80',
   },
-  moderator: {
+  {
     email: 'moderator.demo@makteb.local',
     password: 'DemoPass123!',
-    name: 'Sara Moderator',
+    name: 'Marcus Johnson',
     role: 'MEMBER',
-    bio: 'Moderates comments and events.',
-    avatar:
-      'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=320&q=80',
+    bio: 'Full-stack developer and educator. Love helping people learn to code.',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=320&q=80',
   },
-  member: {
+  {
     email: 'member.demo@makteb.local',
     password: 'DemoPass123!',
-    name: 'Amine Member',
+    name: 'Emma Wilson',
     role: 'MEMBER',
-    bio: 'Learner enrolled in demo courses.',
-    avatar:
-      'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=320&q=80',
+    bio: 'Graphic designer transitioning into UX. Currently learning everything I can.',
+    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=320&q=80',
   },
-  guest: {
+  {
+    email: 'member2.demo@makteb.local',
+    password: 'DemoPass123!',
+    name: 'James Park',
+    role: 'MEMBER',
+    bio: 'Product manager by day, community builder by night.',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=320&q=80',
+  },
+  {
+    email: 'member3.demo@makteb.local',
+    password: 'DemoPass123!',
+    name: 'Lina Dubois',
+    role: 'MEMBER',
+    bio: 'French designer living in NYC. I love minimal design and strong typography.',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=320&q=80',
+  },
+  {
+    email: 'member4.demo@makteb.local',
+    password: 'DemoPass123!',
+    name: 'Raj Patel',
+    role: 'MEMBER',
+    bio: 'Data scientist who writes about AI and machine learning.',
+    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=320&q=80',
+  },
+  {
+    email: 'member5.demo@makteb.local',
+    password: 'DemoPass123!',
+    name: 'Yuki Tanaka',
+    role: 'MEMBER',
+    bio: 'Frontend developer passionate about accessible web design.',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=320&q=80',
+  },
+  {
+    email: 'member6.demo@makteb.local',
+    password: 'DemoPass123!',
+    name: 'Omar Hassan',
+    role: 'MEMBER',
+    bio: 'Startup founder. Building in public and sharing the journey.',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=320&q=80',
+  },
+  {
     email: 'guest.demo@makteb.local',
     password: 'DemoPass123!',
-    name: 'Nour Guest',
+    name: 'Nina Kowalski',
     role: 'MEMBER',
-    bio: 'Guest account invited to the community.',
-    avatar:
-      'https://images.unsplash.com/photo-1542204625-de293a2b42d5?auto=format&fit=crop&w=320&q=80',
+    bio: 'Marketing specialist exploring community-led growth.',
+    avatar: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=320&q=80',
   },
-};
+];
 
-const COMMUNITY = {
-  name: 'Editing Lair Demo',
-  slug: 'editing-lair-demo',
-  description: 'A fake community covering feed, classroom, calendar, and gamification.',
-  coverImage:
-    'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1600&q=80',
-  visibility: 'PUBLIC',
-};
+const COMMUNITIES = [
+  {
+    name: 'Creator Academy',
+    slug: 'creator-academy',
+    description: 'A community for creators who want to build, launch, and grow online businesses. We share strategies, tools, and honest feedback. Weekly live Q&A sessions and a structured course to help you go from 0 to your first $10k.',
+    coverImage: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1600&q=80',
+    visibility: 'PUBLIC',
+  },
+  {
+    name: 'Design Collective',
+    slug: 'design-collective',
+    description: 'For designers who want to level up their craft. Portfolio reviews, design challenges, and mentorship from senior designers at top companies.',
+    coverImage: 'https://images.unsplash.com/photo-1558655146-9f40138edfeb?auto=format&fit=crop&w=1600&q=80',
+    visibility: 'PUBLIC',
+  },
+  {
+    name: 'Code & Coffee',
+    slug: 'code-and-coffee',
+    description: 'Learn to code in a supportive environment. From beginners to seniors, we help each other grow. Daily coding challenges and pair programming sessions.',
+    coverImage: 'https://images.unsplash.com/photo-1517180102446-f3ece451e9d8?auto=format&fit=crop&w=1600&q=80',
+    visibility: 'PUBLIC',
+  },
+  {
+    name: 'Startup Lab',
+    slug: 'startup-lab',
+    description: 'Building a startup? Join founders sharing real numbers, strategies, and lessons learned. No fluff, just real talk about building products people want.',
+    coverImage: 'https://images.unsplash.com/photo-1553028826-f4804a6dba3b?auto=format&fit=crop&w=1600&q=80',
+    visibility: 'PUBLIC',
+  },
+  {
+    name: 'Mindful Living',
+    slug: 'mindful-living',
+    description: 'A space for personal growth, meditation, and intentional living. Weekly guided sessions and a supportive community.',
+    coverImage: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1600&q=80',
+    visibility: 'PUBLIC',
+  },
+  {
+    name: 'Photography Masters',
+    slug: 'photography-masters',
+    description: 'Take better photos. Learn composition, lighting, and editing from professional photographers. Monthly photo challenges.',
+    coverImage: 'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?auto=format&fit=crop&w=1600&q=80',
+    visibility: 'PUBLIC',
+  },
+];
 
-const COURSE = {
-  title: 'Editing Mastery Bootcamp',
-  description: 'Learn editing workflow, storytelling, and client retention systems.',
-  coverImage:
-    'https://images.unsplash.com/photo-1536240478700-b869070f9279?auto=format&fit=crop&w=1600&q=80',
-  status: 'PUBLISHED',
-  published: true,
-  order: 0,
-};
+const COURSES = [
+  {
+    title: 'Creator Business Blueprint',
+    description: 'Go from idea to $10k/month with a step-by-step system for building your creator business. Learn audience building, content strategy, and monetization.',
+    coverImage: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1600&q=80',
+    status: 'PUBLISHED',
+    published: true,
+    order: 0,
+    communityIndex: 0,
+    modules: [
+      {
+        title: 'Foundation & Mindset',
+        lessons: [
+          { title: 'Welcome & Course Overview', type: 'TEXT', content: 'Welcome to the Creator Business Blueprint! In this course, you will learn the exact framework used by top creators to build sustainable online businesses.\n\nHere is what we will cover:\n- Finding your niche\n- Building an audience\n- Creating valuable content\n- Monetization strategies\n- Scaling your business\n\nLet us get started!' },
+          { title: 'Finding Your Niche', type: 'VIDEO', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', content: 'Your niche is the intersection of what you are good at, what you love, and what people will pay for. Use the framework in this lesson to find yours.' },
+          { title: 'The Creator Mindset', type: 'TEXT', content: 'The biggest difference between successful creators and everyone else is mindset. Learn the 5 mental models that separate the top 1% of creators.' },
+        ],
+      },
+      {
+        title: 'Audience Building',
+        lessons: [
+          { title: 'Platform Selection Strategy', type: 'TEXT', content: 'Not all platforms are equal. Learn which platform to focus on based on your content style and target audience.' },
+          { title: 'Content That Grows', type: 'VIDEO', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', content: 'The hook-story-offer framework for creating content that attracts the right audience.' },
+          { title: 'Building a Community', type: 'TEXT', content: 'Why community is the ultimate moat and how to build one from scratch.' },
+        ],
+      },
+      {
+        title: 'Monetization',
+        lessons: [
+          { title: 'Revenue Models for Creators', type: 'TEXT', content: 'An overview of the 7 revenue models available to creators, from courses to consulting to community.' },
+          { title: 'Pricing Your Offers', type: 'TEXT', content: 'How to price your products and services to maximize revenue while delivering insane value.' },
+          { title: 'Your First $10k Month', type: 'QUIZ', content: 'Put it all together and create your personal roadmap to $10k/month.' },
+        ],
+      },
+    ],
+  },
+  {
+    title: 'Design Fundamentals',
+    description: 'Master the principles of great design. From typography to color theory, layout to user experience.',
+    coverImage: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?auto=format&fit=crop&w=1600&q=80',
+    status: 'PUBLISHED',
+    published: true,
+    order: 0,
+    communityIndex: 1,
+    modules: [
+      {
+        title: 'Design Principles',
+        lessons: [
+          { title: 'Introduction to Design Thinking', type: 'TEXT', content: 'Design thinking is a methodology for creative problem solving. Learn the 5 stages and how to apply them.' },
+          { title: 'Typography Essentials', type: 'TEXT', content: 'Typography is the backbone of design. Learn font pairing, hierarchy, and readability.' },
+          { title: 'Color Theory in Practice', type: 'VIDEO', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', content: 'Understanding color psychology and creating harmonious palettes.' },
+        ],
+      },
+      {
+        title: 'UI Design',
+        lessons: [
+          { title: 'Layout & Spacing', type: 'TEXT', content: 'The invisible art of layout. How spacing, alignment, and grids create visual harmony.' },
+          { title: 'Component Design', type: 'TEXT', content: 'Building reusable UI components that are both beautiful and functional.' },
+        ],
+      },
+    ],
+  },
+];
 
 const LEVELS = [
   { name: 'Newcomer', minPoints: 0, levelNumber: 1, unlockDescription: 'Access community feed', order: 1 },
@@ -77,10 +202,70 @@ const LEVELS = [
   { name: 'Legend', minPoints: 1000, levelNumber: 5, unlockDescription: 'Top leaderboard frame', order: 5 },
 ];
 
-const POST_TITLES = [
-  '[FAKE] My first win after joining',
-  '[FAKE] Need feedback on onboarding flow',
-  '[FAKE] Weekly productivity checkpoint',
+const POST_DATA = [
+  {
+    title: 'Just hit 1,000 subscribers!',
+    content: 'After 3 months of consistent posting and following the framework from Module 2, I finally crossed 1,000 subscribers. The content-that-grows lesson was a game changer for me.\n\nMy biggest takeaway: consistency beats perfection every single time. I was spending days on each piece of content before. Now I publish 3x per week and the growth has been exponential.\n\nThank you to everyone in this community for the support!',
+    type: 'POST',
+    category: 'WINS',
+  },
+  {
+    title: 'Weekly Accountability Thread',
+    content: 'What did you accomplish this week? Share your wins, no matter how small.\n\nI will start: I launched my first digital product (a Notion template) and made $127 in the first 48 hours. Not life-changing money, but proof that this works.',
+    type: 'DISCUSSION',
+    category: 'GENERAL',
+    pinned: true,
+  },
+  {
+    title: 'Best tools for community management?',
+    content: 'I am setting up my own community and looking for recommendations on:\n- Email marketing platform\n- Community hosting (besides Makteb of course)\n- Content scheduling tools\n- Analytics dashboards\n\nWhat is working for you all?',
+    type: 'QUESTION',
+    category: 'WORKFLOW_PRODUCTIVITY',
+  },
+  {
+    title: 'How I went from 0 to $5k/mo in 6 months',
+    content: 'Here is the exact breakdown of my journey:\n\nMonth 1-2: Built audience on Twitter (0 to 2k followers)\nMonth 3: Launched a free community (got 200 members)\nMonth 4: Created my first paid course ($29)\nMonth 5: Added coaching ($200/session)\nMonth 6: Hit $5k MRR\n\nThe key was not trying to monetize too early. I spent the first 2 months just providing value and understanding what my audience actually wanted.',
+    type: 'POST',
+    category: 'WINS',
+  },
+  {
+    title: 'Introduce yourself here!',
+    content: 'New to the community? Tell us about yourself!\n\n- What do you do?\n- What are you hoping to learn?\n- What is your biggest challenge right now?\n\nCan not wait to meet everyone.',
+    type: 'DISCUSSION',
+    category: 'INTRODUCE_YOURSELF',
+    pinned: true,
+  },
+  {
+    title: 'Landing page feedback request',
+    content: 'Just redesigned my landing page and would love some honest feedback. I am going for a clean, minimal look with strong copy.\n\nMain changes:\n- Simplified the hero section\n- Added social proof above the fold\n- Reduced the number of CTAs\n- Made the pricing section clearer\n\nWhat do you think?',
+    type: 'POST',
+    category: 'BRANDING_CLIENTS',
+  },
+  {
+    title: 'The power of showing up daily',
+    content: 'Something I have noticed after being in this community for 3 months: the people who show up every day, even just for 10 minutes, are the ones making the most progress.\n\nIt is not about the grand gestures. It is about the daily compound effect.\n\nWho else has noticed this?',
+    type: 'DISCUSSION',
+    category: 'GENERAL',
+  },
+  {
+    title: 'Resources that changed my perspective',
+    content: 'Sharing some resources that had a huge impact on my creator journey:\n\n1. "Show Your Work" by Austin Kleon\n2. "The Minimalist Entrepreneur" by Sahil Lavingia\n3. "Building a Second Brain" by Tiago Forte\n\nAll three shifted how I think about creating and sharing online.',
+    type: 'POST',
+    category: 'WORKFLOW_PRODUCTIVITY',
+  },
+];
+
+const COMMENTS_DATA = [
+  'Congratulations! This is incredible progress. Keep going!',
+  'Love seeing wins like this in the community. Proves the system works.',
+  'This is so inspiring. I am on month 2 right now and this gives me hope.',
+  'I use ConvertKit for email and Notion for project management. Both have been game changers.',
+  'Great question! I have been using Buffer for scheduling and it has saved me hours each week.',
+  'Wow, $5k in 6 months is impressive. What was your content strategy?',
+  'The compound effect is real. I have been showing up for 90 days straight and the difference is night and day.',
+  'Thanks for sharing these resources! Just ordered "Show Your Work".',
+  'Would love to see the landing page! Can you share a link?',
+  'Welcome to everyone new! This community changed my life.',
 ];
 
 function daysFromNow(days, hour = 18) {
@@ -94,441 +279,228 @@ async function upsertLocalUser({ email, password, name, role, avatar, bio }) {
   const passwordHash = await hashPassword(password);
   return prisma.user.upsert({
     where: { email },
-    update: {
-      name,
-      role,
-      avatar,
-      bio,
-      provider: 'LOCAL',
-      passwordHash,
-    },
-    create: {
-      email,
-      name,
-      role,
-      avatar,
-      bio,
-      provider: 'LOCAL',
-      passwordHash,
-    },
+    update: { name, role, avatar, bio, provider: 'LOCAL', passwordHash },
+    create: { email, name, role, avatar, bio, provider: 'LOCAL', passwordHash },
   });
 }
 
-async function upsertPaymentByProviderRef({
-  userId,
-  type,
-  referenceId,
-  subscriptionId,
-  amount,
-  currency,
-  provider,
-  status,
-  providerTxId,
-}) {
-  const existing = await prisma.payment.findFirst({
-    where: { providerTxId },
-  });
-
-  if (existing) {
-    return prisma.payment.update({
-      where: { id: existing.id },
-      data: { userId, type, referenceId, subscriptionId, amount, currency, provider, status, providerTxId },
-    });
-  }
-
-  return prisma.payment.create({
-    data: { userId, type, referenceId, subscriptionId, amount, currency, provider, status, providerTxId },
-  });
+async function upsertPaymentByProviderRef(data) {
+  const existing = await prisma.payment.findFirst({ where: { providerTxId: data.providerTxId } });
+  if (existing) return prisma.payment.update({ where: { id: existing.id }, data });
+  return prisma.payment.create({ data });
 }
 
 async function seed() {
-  const [owner, admin, moderator, member, guest] = await Promise.all(
-    Object.values(USERS).map((user) => upsertLocalUser(user))
-  );
+  // Create users
+  const users = await Promise.all(USERS.map((u) => upsertLocalUser(u)));
+  const [owner, admin, moderator, ...regularMembers] = users;
 
-  const community = await prisma.community.upsert({
-    where: { slug: COMMUNITY.slug },
-    update: {
-      name: COMMUNITY.name,
-      description: COMMUNITY.description,
-      coverImage: COMMUNITY.coverImage,
-      visibility: COMMUNITY.visibility,
-      creatorId: owner.id,
-    },
-    create: {
-      ...COMMUNITY,
-      creatorId: owner.id,
-    },
-  });
+  // Create communities
+  const communities = [];
+  for (const communityData of COMMUNITIES) {
+    const community = await prisma.community.upsert({
+      where: { slug: communityData.slug },
+      update: { ...communityData, creatorId: owner.id },
+      create: { ...communityData, creatorId: owner.id },
+    });
+    communities.push(community);
+  }
 
-  await Promise.all([
-    prisma.communityMember.upsert({
-      where: { userId_communityId: { userId: owner.id, communityId: community.id } },
-      update: { role: 'OWNER', status: 'ACTIVE' },
-      create: { userId: owner.id, communityId: community.id, role: 'OWNER', status: 'ACTIVE' },
-    }),
-    prisma.communityMember.upsert({
-      where: { userId_communityId: { userId: admin.id, communityId: community.id } },
-      update: { role: 'ADMIN', status: 'ACTIVE' },
-      create: { userId: admin.id, communityId: community.id, role: 'ADMIN', status: 'ACTIVE' },
-    }),
-    prisma.communityMember.upsert({
-      where: { userId_communityId: { userId: moderator.id, communityId: community.id } },
-      update: { role: 'MODERATOR', status: 'ACTIVE' },
-      create: { userId: moderator.id, communityId: community.id, role: 'MODERATOR', status: 'ACTIVE' },
-    }),
-    prisma.communityMember.upsert({
-      where: { userId_communityId: { userId: member.id, communityId: community.id } },
-      update: { role: 'MEMBER', status: 'ACTIVE' },
-      create: { userId: member.id, communityId: community.id, role: 'MEMBER', status: 'ACTIVE' },
-    }),
-  ]);
+  // Add members to first community (main one)
+  const mainCommunity = communities[0];
+  const memberRoles = ['OWNER', 'ADMIN', 'MODERATOR', 'MEMBER', 'MEMBER', 'MEMBER', 'MEMBER', 'MEMBER', 'MEMBER', 'MEMBER'];
 
-  await prisma.invite.upsert({
-    where: { token: 'invite-demo-guest-token' },
-    update: {
-      communityId: community.id,
-      invitedEmail: guest.email,
-      invitedById: admin.id,
-      status: 'PENDING',
-      expiresAt: daysFromNow(7),
-    },
-    create: {
-      communityId: community.id,
-      invitedEmail: guest.email,
-      invitedById: admin.id,
-      token: 'invite-demo-guest-token',
-      status: 'PENDING',
-      expiresAt: daysFromNow(7),
-    },
-  });
+  for (let i = 0; i < users.length; i++) {
+    await prisma.communityMember.upsert({
+      where: { userId_communityId: { userId: users[i].id, communityId: mainCommunity.id } },
+      update: { role: memberRoles[i] || 'MEMBER', status: 'ACTIVE' },
+      create: { userId: users[i].id, communityId: mainCommunity.id, role: memberRoles[i] || 'MEMBER', status: 'ACTIVE' },
+    });
+  }
 
-  await prisma.level.deleteMany({ where: { communityId: community.id } });
+  // Add some members to other communities
+  for (let ci = 1; ci < communities.length; ci++) {
+    const membersToAdd = users.slice(0, 3 + ci);
+    for (const u of membersToAdd) {
+      await prisma.communityMember.upsert({
+        where: { userId_communityId: { userId: u.id, communityId: communities[ci].id } },
+        update: { role: u.id === owner.id ? 'OWNER' : 'MEMBER', status: 'ACTIVE' },
+        create: { userId: u.id, communityId: communities[ci].id, role: u.id === owner.id ? 'OWNER' : 'MEMBER', status: 'ACTIVE' },
+      });
+    }
+  }
+
+  // Levels for main community
+  await prisma.level.deleteMany({ where: { communityId: mainCommunity.id } });
   await prisma.level.createMany({
-    data: LEVELS.map((level) => ({ ...level, communityId: community.id })),
+    data: LEVELS.map((level) => ({ ...level, communityId: mainCommunity.id })),
   });
 
+  // Plans & subscriptions
   const monthlyPlan = await prisma.plan.upsert({
-    where: {
-      communityId_name: {
-        communityId: community.id,
-        name: 'Pro Monthly',
-      },
-    },
-    update: {
-      priceCents: 4900,
-      currency: 'USD',
-      interval: 'MONTH',
-      isActive: true,
-    },
-    create: {
-      communityId: community.id,
-      name: 'Pro Monthly',
-      priceCents: 4900,
-      currency: 'USD',
-      interval: 'MONTH',
-      isActive: true,
-    },
+    where: { communityId_name: { communityId: mainCommunity.id, name: 'Pro Monthly' } },
+    update: { priceCents: 4900, currency: 'USD', interval: 'MONTH', isActive: true },
+    create: { communityId: mainCommunity.id, name: 'Pro Monthly', priceCents: 4900, currency: 'USD', interval: 'MONTH', isActive: true },
   });
 
-  const ownerSubscription = await prisma.subscription.upsert({
+  const ownerSub = await prisma.subscription.upsert({
     where: { planId_userId: { planId: monthlyPlan.id, userId: owner.id } },
-    update: {
-      status: 'ACTIVE',
-      currentPeriodEnd: daysFromNow(30),
-      canceledAt: null,
-    },
-    create: {
-      planId: monthlyPlan.id,
-      userId: owner.id,
-      status: 'ACTIVE',
-      currentPeriodEnd: daysFromNow(30),
-    },
+    update: { status: 'ACTIVE', currentPeriodEnd: daysFromNow(30) },
+    create: { planId: monthlyPlan.id, userId: owner.id, status: 'ACTIVE', currentPeriodEnd: daysFromNow(30) },
   });
 
-  const memberSubscription = await prisma.subscription.upsert({
-    where: { planId_userId: { planId: monthlyPlan.id, userId: member.id } },
-    update: {
-      status: 'TRIALING',
-      currentPeriodEnd: daysFromNow(14),
-      canceledAt: null,
-    },
-    create: {
-      planId: monthlyPlan.id,
-      userId: member.id,
-      status: 'TRIALING',
-      currentPeriodEnd: daysFromNow(14),
-    },
-  });
+  // Courses
+  const createdCourses = [];
+  for (const courseData of COURSES) {
+    const communityForCourse = communities[courseData.communityIndex];
+    const existing = await prisma.course.findFirst({
+      where: { communityId: communityForCourse.id, title: courseData.title },
+    });
+    const coursePayload = {
+      title: courseData.title,
+      description: courseData.description,
+      coverImage: courseData.coverImage,
+      status: courseData.status,
+      published: courseData.published,
+      order: courseData.order,
+      communityId: communityForCourse.id,
+      creatorId: owner.id,
+    };
 
-  const existingCourse = await prisma.course.findFirst({
-    where: { communityId: community.id, title: COURSE.title },
-  });
+    const course = existing
+      ? await prisma.course.update({ where: { id: existing.id }, data: coursePayload })
+      : await prisma.course.create({ data: coursePayload });
 
-  const course = existingCourse
-    ? await prisma.course.update({
-        where: { id: existingCourse.id },
-        data: { ...COURSE, communityId: community.id, creatorId: owner.id },
-      })
-    : await prisma.course.create({
-        data: { ...COURSE, communityId: community.id, creatorId: owner.id },
+    // Delete old modules
+    await prisma.module.deleteMany({ where: { courseId: course.id } });
+
+    // Create modules and lessons
+    for (let mi = 0; mi < courseData.modules.length; mi++) {
+      const modData = courseData.modules[mi];
+      const mod = await prisma.module.create({
+        data: { courseId: course.id, title: modData.title, order: mi },
       });
 
-  await prisma.module.deleteMany({ where: { courseId: course.id } });
+      for (let li = 0; li < modData.lessons.length; li++) {
+        const lessonData = modData.lessons[li];
+        await prisma.lesson.create({
+          data: {
+            moduleId: mod.id,
+            title: lessonData.title,
+            type: lessonData.type,
+            content: lessonData.content,
+            videoUrl: lessonData.videoUrl || null,
+            order: li,
+          },
+        });
+      }
+    }
 
-  const moduleFundamentals = await prisma.module.create({
-    data: {
-      courseId: course.id,
-      title: 'Foundation Systems',
-      order: 0,
-    },
+    createdCourses.push(course);
+  }
+
+  // Enrollments
+  const mainCourse = createdCourses[0];
+  const mainCourseData = await prisma.course.findUnique({
+    where: { id: mainCourse.id },
+    include: { modules: { include: { lessons: true } } },
   });
-  const moduleAdvanced = await prisma.module.create({
-    data: {
-      courseId: course.id,
-      title: 'Advanced Growth Loops',
-      order: 1,
-    },
-  });
+  const allLessons = mainCourseData.modules.flatMap((m) => m.lessons);
 
-  const lessons = await Promise.all([
-    prisma.lesson.create({
-      data: {
-        moduleId: moduleFundamentals.id,
-        title: 'Welcome and Workflow Setup',
-        type: 'TEXT',
-        content: 'Set up your editing workflow, folder structure, and checklist.',
-        attachmentsJson: [{ type: 'pdf', name: 'workflow-checklist.pdf' }],
-        order: 0,
-      },
-    }),
-    prisma.lesson.create({
-      data: {
-        moduleId: moduleFundamentals.id,
-        title: 'Revision Loops',
-        type: 'VIDEO',
-        videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-        content: 'Run structured feedback loops for better outputs.',
-        order: 1,
-      },
-    }),
-    prisma.lesson.create({
-      data: {
-        moduleId: moduleAdvanced.id,
-        title: 'Audience Positioning',
-        type: 'TEXT',
-        content: 'Define positioning and outcomes for your audience.',
-        order: 0,
-      },
-    }),
-    prisma.lesson.create({
-      data: {
-        moduleId: moduleAdvanced.id,
-        title: 'Retention Rituals',
-        type: 'QUIZ',
-        content: 'Quiz: weekly rhythm and retention loops.',
-        order: 1,
-      },
-    }),
-  ]);
+  for (let i = 1; i < Math.min(users.length, 8); i++) {
+    const completedCount = Math.max(0, Math.floor(allLessons.length * (1 - i * 0.12)));
+    const completedLessons = allLessons.slice(0, completedCount).map((l) => l.id);
+    const progress = allLessons.length > 0 ? Math.round((completedCount / allLessons.length) * 100) : 0;
 
-  const [lesson1, lesson2, lesson3, lesson4] = lessons;
+    await prisma.enrollment.upsert({
+      where: { userId_courseId: { userId: users[i].id, courseId: mainCourse.id } },
+      update: { progress, completedLessons },
+      create: { userId: users[i].id, courseId: mainCourse.id, progress, completedLessons },
+    });
 
-  await Promise.all([
-    prisma.enrollment.upsert({
-      where: { userId_courseId: { userId: member.id, courseId: course.id } },
-      update: { progress: 50, completedLessons: [lesson1.id, lesson2.id] },
-      create: {
-        userId: member.id,
-        courseId: course.id,
-        progress: 50,
-        completedLessons: [lesson1.id, lesson2.id],
-      },
-    }),
-    prisma.enrollment.upsert({
-      where: { userId_courseId: { userId: moderator.id, courseId: course.id } },
-      update: { progress: 25, completedLessons: [lesson1.id] },
-      create: {
-        userId: moderator.id,
-        courseId: course.id,
-        progress: 25,
-        completedLessons: [lesson1.id],
-      },
-    }),
-  ]);
+    for (const lessonId of completedLessons) {
+      await prisma.lessonProgress.upsert({
+        where: { lessonId_userId: { lessonId, userId: users[i].id } },
+        update: { status: 'COMPLETED', completedAt: daysFromNow(-Math.floor(Math.random() * 14)) },
+        create: { lessonId, userId: users[i].id, status: 'COMPLETED', completedAt: daysFromNow(-Math.floor(Math.random() * 14)) },
+      });
+    }
+  }
 
-  const lessonProgressEntries = [
-    { lessonId: lesson1.id, userId: member.id, status: 'COMPLETED', completedAt: daysFromNow(-3) },
-    { lessonId: lesson2.id, userId: member.id, status: 'COMPLETED', completedAt: daysFromNow(-2) },
-    { lessonId: lesson3.id, userId: member.id, status: 'IN_PROGRESS', completedAt: null },
-    { lessonId: lesson1.id, userId: moderator.id, status: 'COMPLETED', completedAt: daysFromNow(-1) },
-    { lessonId: lesson2.id, userId: moderator.id, status: 'IN_PROGRESS', completedAt: null },
-    { lessonId: lesson4.id, userId: owner.id, status: 'NOT_STARTED', completedAt: null },
-  ];
-
-  await Promise.all(
-    lessonProgressEntries.map((entry) =>
-      prisma.lessonProgress.upsert({
-        where: { lessonId_userId: { lessonId: entry.lessonId, userId: entry.userId } },
-        update: {
-          status: entry.status,
-          completedAt: entry.completedAt,
-        },
-        create: entry,
-      })
-    )
-  );
-
+  // Posts
+  const postTitles = POST_DATA.map((p) => p.title);
   await prisma.post.deleteMany({
-    where: {
-      communityId: community.id,
-      title: { in: POST_TITLES },
-    },
+    where: { communityId: mainCommunity.id, title: { in: postTitles } },
   });
 
-  const postA = await prisma.post.create({
-    data: {
-      communityId: community.id,
-      authorId: member.id,
-      title: POST_TITLES[0],
-      content: 'I finished 3 pending edits this week using batching and time-boxing.',
-      type: 'POST',
-      category: 'WINS',
-    },
-  });
-  const postB = await prisma.post.create({
-    data: {
-      communityId: community.id,
-      authorId: owner.id,
-      title: POST_TITLES[1],
-      content: 'Share your best onboarding sequence for new editing clients.',
-      type: 'QUESTION',
-      category: 'BRANDING_CLIENTS',
-      pinned: true,
-    },
-  });
-  const postC = await prisma.post.create({
-    data: {
-      communityId: community.id,
-      authorId: moderator.id,
-      title: POST_TITLES[2],
-      content: 'What workflow habit improved your speed this week?',
-      type: 'DISCUSSION',
-      category: 'WORKFLOW_PRODUCTIVITY',
-    },
-  });
+  const createdPosts = [];
+  for (let i = 0; i < POST_DATA.length; i++) {
+    const authorIndex = i % users.length;
+    const post = await prisma.post.create({
+      data: {
+        communityId: mainCommunity.id,
+        authorId: users[authorIndex].id,
+        ...POST_DATA[i],
+        pinned: POST_DATA[i].pinned || false,
+      },
+    });
+    createdPosts.push(post);
+  }
 
-  const commentA = await prisma.comment.create({
-    data: {
-      postId: postA.id,
-      authorId: owner.id,
-      content: 'Great progress. Keep this cadence for next week.',
-    },
-  });
-  const commentB = await prisma.comment.create({
-    data: {
-      postId: postA.id,
-      authorId: member.id,
-      parentId: commentA.id,
-      content: 'Will do, thank you!',
-    },
-  });
-  const commentC = await prisma.comment.create({
-    data: {
-      postId: postB.id,
-      authorId: moderator.id,
-      content: 'Start with scope, timeline, revision policy, then communication channel.',
-    },
-  });
-
-  await Promise.all([
-    prisma.like.upsert({
-      where: { postId_userId: { postId: postA.id, userId: owner.id } },
-      update: {},
-      create: { postId: postA.id, userId: owner.id },
-    }),
-    prisma.like.upsert({
-      where: { postId_userId: { postId: postA.id, userId: moderator.id } },
-      update: {},
-      create: { postId: postA.id, userId: moderator.id },
-    }),
-    prisma.like.upsert({
-      where: { postId_userId: { postId: postB.id, userId: member.id } },
-      update: {},
-      create: { postId: postB.id, userId: member.id },
-    }),
-  ]);
-
-  await Promise.all([
-    prisma.reaction.upsert({
-      where: {
-        userId_targetType_targetId_emoji: {
-          userId: owner.id,
-          targetType: 'POST',
-          targetId: postA.id,
-          emoji: '🔥',
+  // Comments
+  for (let i = 0; i < createdPosts.length; i++) {
+    const numComments = 2 + (i % 3);
+    for (let j = 0; j < numComments; j++) {
+      const commentIdx = (i * 3 + j) % COMMENTS_DATA.length;
+      const authorIdx = (i + j + 1) % users.length;
+      const comment = await prisma.comment.create({
+        data: {
+          postId: createdPosts[i].id,
+          authorId: users[authorIdx].id,
+          content: COMMENTS_DATA[commentIdx],
         },
-      },
-      update: { postId: postA.id, commentId: null },
-      create: {
-        userId: owner.id,
-        targetType: 'POST',
-        targetId: postA.id,
-        postId: postA.id,
-        emoji: '🔥',
-      },
-    }),
-    prisma.reaction.upsert({
-      where: {
-        userId_targetType_targetId_emoji: {
-          userId: member.id,
-          targetType: 'COMMENT',
-          targetId: commentC.id,
-          emoji: '👍',
-        },
-      },
-      update: { postId: null, commentId: commentC.id },
-      create: {
-        userId: member.id,
-        targetType: 'COMMENT',
-        targetId: commentC.id,
-        commentId: commentC.id,
-        emoji: '👍',
-      },
-    }),
-    prisma.reaction.upsert({
-      where: {
-        userId_targetType_targetId_emoji: {
-          userId: moderator.id,
-          targetType: 'COMMENT',
-          targetId: commentB.id,
-          emoji: '🎯',
-        },
-      },
-      update: { postId: null, commentId: commentB.id },
-      create: {
-        userId: moderator.id,
-        targetType: 'COMMENT',
-        targetId: commentB.id,
-        commentId: commentB.id,
-        emoji: '🎯',
-      },
-    }),
-  ]);
+      });
 
+      // Add a reply to some comments
+      if (j === 0) {
+        const replyAuthorIdx = (i + j + 2) % users.length;
+        await prisma.comment.create({
+          data: {
+            postId: createdPosts[i].id,
+            authorId: users[replyAuthorIdx].id,
+            parentId: comment.id,
+            content: 'Thanks for sharing! This resonates with me a lot.',
+          },
+        });
+      }
+    }
+  }
+
+  // Likes
+  for (let i = 0; i < createdPosts.length; i++) {
+    const numLikes = 2 + (i % 5);
+    for (let j = 0; j < numLikes && j < users.length; j++) {
+      const userIdx = (i + j) % users.length;
+      await prisma.like.upsert({
+        where: { postId_userId: { postId: createdPosts[i].id, userId: users[userIdx].id } },
+        update: {},
+        create: { postId: createdPosts[i].id, userId: users[userIdx].id },
+      });
+    }
+  }
+
+  // Events
+  const eventTitles = ['Weekly Live Q&A', 'Portfolio Review', 'Content Strategy Workshop', 'Networking Session'];
   await prisma.event.deleteMany({
-    where: {
-      communityId: community.id,
-      title: { in: ['[FAKE] Weekly Live Q&A', '[FAKE] Portfolio Review Session'] },
-    },
+    where: { communityId: mainCommunity.id, title: { in: eventTitles } },
   });
 
   const eventA = await prisma.event.create({
     data: {
-      communityId: community.id,
+      communityId: mainCommunity.id,
       createdBy: owner.id,
-      title: '[FAKE] Weekly Live Q&A',
-      description: 'Ask questions about workflow, clients, and pricing.',
+      title: 'Weekly Live Q&A',
+      description: 'Ask anything about building your creator business. Alex answers live.',
       startAt: daysFromNow(2, 17),
       endAt: daysFromNow(2, 18),
       meetingUrl: 'https://meet.example.com/live-qna',
@@ -536,120 +508,113 @@ async function seed() {
   });
   const eventB = await prisma.event.create({
     data: {
-      communityId: community.id,
-      createdBy: moderator.id,
-      title: '[FAKE] Portfolio Review Session',
-      description: 'Live review for submitted editing reels.',
+      communityId: mainCommunity.id,
+      createdBy: admin.id,
+      title: 'Portfolio Review',
+      description: 'Submit your portfolio or landing page for live feedback.',
       startAt: daysFromNow(5, 19),
       endAt: daysFromNow(5, 20),
       meetingUrl: 'https://meet.example.com/portfolio-review',
     },
   });
+  await prisma.event.create({
+    data: {
+      communityId: mainCommunity.id,
+      createdBy: owner.id,
+      title: 'Content Strategy Workshop',
+      description: 'Deep-dive into content strategy frameworks that drive growth.',
+      startAt: daysFromNow(9, 18),
+      endAt: daysFromNow(9, 19),
+      meetingUrl: 'https://meet.example.com/workshop',
+    },
+  });
 
-  await Promise.all([
-    prisma.eventAttendance.upsert({
-      where: { eventId_userId: { eventId: eventA.id, userId: owner.id } },
+  for (const u of users.slice(0, 5)) {
+    await prisma.eventAttendance.upsert({
+      where: { eventId_userId: { eventId: eventA.id, userId: u.id } },
       update: { status: 'GOING', respondedAt: new Date() },
-      create: { eventId: eventA.id, userId: owner.id, status: 'GOING' },
-    }),
-    prisma.eventAttendance.upsert({
-      where: { eventId_userId: { eventId: eventA.id, userId: member.id } },
-      update: { status: 'MAYBE', respondedAt: new Date() },
-      create: { eventId: eventA.id, userId: member.id, status: 'MAYBE' },
-    }),
-    prisma.eventAttendance.upsert({
-      where: { eventId_userId: { eventId: eventB.id, userId: moderator.id } },
-      update: { status: 'GOING', respondedAt: new Date() },
-      create: { eventId: eventB.id, userId: moderator.id, status: 'GOING' },
-    }),
-    prisma.eventAttendance.upsert({
-      where: { eventId_userId: { eventId: eventB.id, userId: admin.id } },
-      update: { status: 'NOT_GOING', respondedAt: new Date() },
-      create: { eventId: eventB.id, userId: admin.id, status: 'NOT_GOING' },
-    }),
-  ]);
+      create: { eventId: eventA.id, userId: u.id, status: 'GOING' },
+    });
+  }
 
+  // Points
   await prisma.pointEntry.deleteMany({
-    where: {
-      communityId: community.id,
-      userId: { in: [owner.id, admin.id, moderator.id, member.id] },
-      reason: { startsWith: '[FAKE]' },
-    },
-  });
-  await prisma.pointEntry.createMany({
-    data: [
-      { userId: owner.id, communityId: community.id, sourceType: 'POST', sourceId: postB.id, amount: 5, reason: '[FAKE] Created post' },
-      { userId: member.id, communityId: community.id, sourceType: 'COMMENT', sourceId: commentB.id, amount: 2, reason: '[FAKE] Added comment' },
-      { userId: moderator.id, communityId: community.id, sourceType: 'EVENT', sourceId: eventB.id, amount: 8, reason: '[FAKE] Hosted event' },
-      { userId: member.id, communityId: community.id, sourceType: 'LESSON', sourceId: lesson2.id, amount: 10, reason: '[FAKE] Completed lesson' },
-      { userId: admin.id, communityId: community.id, sourceType: 'MANUAL', sourceId: null, amount: 30, reason: '[FAKE] Manual admin bonus' },
-    ],
+    where: { communityId: mainCommunity.id, reason: { startsWith: '[SEED]' } },
   });
 
-  await Promise.all([
-    upsertPaymentByProviderRef({
-      userId: member.id,
-      type: 'COURSE',
-      referenceId: course.id,
-      subscriptionId: memberSubscription.id,
-      amount: 49,
-      currency: 'USD',
-      provider: 'STRIPE',
-      status: 'SUCCEEDED',
-      providerTxId: 'fake-tx-course-member-001',
-    }),
-    upsertPaymentByProviderRef({
-      userId: owner.id,
-      type: 'COMMUNITY',
-      referenceId: community.id,
-      subscriptionId: ownerSubscription.id,
-      amount: 49,
-      currency: 'USD',
-      provider: 'FLOUCI',
-      status: 'COMPLETED',
-      providerTxId: 'fake-tx-community-owner-001',
-    }),
-  ]);
+  const pointEntries = [];
+  const sourceTypes = ['POST', 'COMMENT', 'LESSON', 'EVENT', 'MANUAL'];
+  for (let i = 0; i < users.length; i++) {
+    const basePoints = 50 + Math.floor(Math.random() * 200);
+    const numEntries = 2 + (i % 4);
+    for (let j = 0; j < numEntries; j++) {
+      pointEntries.push({
+        userId: users[i].id,
+        communityId: mainCommunity.id,
+        sourceType: sourceTypes[j % sourceTypes.length],
+        sourceId: null,
+        amount: Math.floor(basePoints / numEntries) + j * 3,
+        reason: `[SEED] Activity ${j + 1}`,
+      });
+    }
+  }
+  await prisma.pointEntry.createMany({ data: pointEntries });
 
+  // Payments
+  await upsertPaymentByProviderRef({
+    userId: regularMembers[0].id,
+    type: 'COURSE',
+    referenceId: mainCourse.id,
+    subscriptionId: ownerSub.id,
+    amount: 49,
+    currency: 'USD',
+    provider: 'STRIPE',
+    status: 'SUCCEEDED',
+    providerTxId: 'seed-tx-course-001',
+  });
+  await upsertPaymentByProviderRef({
+    userId: owner.id,
+    type: 'COMMUNITY',
+    referenceId: mainCommunity.id,
+    subscriptionId: ownerSub.id,
+    amount: 49,
+    currency: 'USD',
+    provider: 'FLOUCI',
+    status: 'COMPLETED',
+    providerTxId: 'seed-tx-community-001',
+  });
+
+  // Notifications
   await prisma.notification.deleteMany({
-    where: {
-      userId: { in: [owner.id, member.id] },
-      title: { startsWith: '[FAKE]' },
-    },
+    where: { title: { startsWith: '[SEED]' } },
   });
   await prisma.notification.createMany({
     data: [
-      {
-        userId: owner.id,
-        title: '[FAKE] New event scheduled',
-        body: 'Weekly Live Q&A is scheduled in 2 days.',
-        link: `/community/${community.slug}`,
-      },
-      {
-        userId: member.id,
-        title: '[FAKE] Lesson progress updated',
-        body: 'You completed 2 lessons in Editing Mastery Bootcamp.',
-        link: `/course/${course.id}/learn`,
-      },
+      { userId: owner.id, title: '[SEED] New event scheduled', body: 'Weekly Live Q&A is scheduled in 2 days.', link: `/community/${mainCommunity.slug}` },
+      { userId: regularMembers[0].id, title: '[SEED] Course progress', body: 'You completed 5 lessons in Creator Business Blueprint!', link: `/course/${mainCourse.id}/learn` },
+      { userId: regularMembers[1].id, title: '[SEED] New post in community', body: 'Alex shared a new post about growth strategies.', link: `/community/${mainCommunity.slug}` },
     ],
   });
 
-  console.log('\nCommunity platform fake data seeded successfully.\n');
-  console.log('Credentials');
-  for (const key of Object.keys(USERS)) {
-    const account = USERS[key];
-    console.log(`- ${key}: ${account.email} / ${account.password}`);
+  console.log('\nSeed completed successfully!\n');
+  console.log('Credentials (all passwords: DemoPass123!)');
+  for (const u of USERS) {
+    console.log(`  ${u.name}: ${u.email}`);
   }
-  console.log('\nQuick URLs');
-  console.log(`- Discover: ${env.clientUrl}/discover`);
-  console.log(`- Community: ${env.clientUrl}/community/${community.slug}`);
-  console.log(`- Course shell: ${env.clientUrl}/course/${course.id}`);
-  console.log(`- Lesson player: ${env.clientUrl}/course/${course.id}/learn\n`);
+  console.log(`\nCommunities: ${communities.length}`);
+  console.log(`Courses: ${createdCourses.length}`);
+  console.log(`Posts: ${createdPosts.length}`);
+  console.log(`Users: ${users.length}`);
+  console.log('\nURLs');
+  console.log(`  Discover: ${env.clientUrl}/discover`);
+  console.log(`  Main community: ${env.clientUrl}/community/${mainCommunity.slug}`);
+  console.log(`  Course: ${env.clientUrl}/course/${mainCourse.id}`);
+  console.log(`  Course learn: ${env.clientUrl}/course/${mainCourse.id}/learn\n`);
 }
 
 seed()
   .catch((error) => {
-    console.error('Failed to seed community platform fake data:', error);
+    console.error('Seed failed:', error);
     process.exitCode = 1;
   })
   .finally(async () => {

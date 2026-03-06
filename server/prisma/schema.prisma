@@ -86,6 +86,7 @@ model Community {
   slug        String              @unique
   description String?
   coverImage  String?
+  category    String?
   visibility  CommunityVisibility @default(PUBLIC)
   price       Decimal?            @db.Decimal(10, 3)
   creatorId   String

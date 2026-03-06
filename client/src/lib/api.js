@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+// In production set VITE_API_URL (e.g. https://api.yoursite.com/api). In dev we use Vite proxy so '/api' is enough.
+const apiBase = import.meta.env.VITE_API_URL ?? '/api';
+
 export const api = axios.create({
-  baseURL: '/api',
+  baseURL: apiBase,
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 });
@@ -13,7 +16,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;
       try {
-        await axios.post('/api/auth/refresh', {}, { withCredentials: true });
+        await axios.post(`${apiBase}/auth/refresh`, {}, { withCredentials: true });
         return api(original);
       } catch {
         window.location.href = '/login';

@@ -11,6 +11,7 @@ const router = Router();
 const createCommunitySchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
+  category: z.string().optional().nullable(),
   visibility: z.enum(['PUBLIC', 'PRIVATE']).optional(),
   price: z.number().positive().optional().nullable(),
   coverImage: z.string().url().optional().nullable(),
@@ -20,8 +21,9 @@ const updateCommunitySchema = createCommunitySchema.partial();
 
 router.get('/', async (req, res) => {
   const search = query(req, 'search');
+  const category = query(req, 'category');
   const pagination = parsePagination(req, 12);
-  const result = await communityService.listCommunities({ search, ...pagination });
+  const result = await communityService.listCommunities({ search, category, ...pagination });
   res.json(result);
 });
 

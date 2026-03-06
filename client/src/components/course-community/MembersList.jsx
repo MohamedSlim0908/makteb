@@ -1,10 +1,10 @@
-import { CalendarDays, Clock3, MessageCircle } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 import { Avatar } from '../ui/Avatar';
 import { getMemberLocation, getMemberPresence } from './mockData';
 
 function buildHandle(member) {
   const base = (member.user?.name || 'member').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  return `@${base}-${String(member.user?.id || member.id).slice(0, 4)}`;
+  return `@${base}`;
 }
 
 function formatJoinedDate(value) {
@@ -18,51 +18,46 @@ function formatJoinedDate(value) {
 
 export function MembersList({ members = [] }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200">
-      {members.map((member, index) => {
+    <div className="space-y-0">
+      {members.map((member) => {
         const presence = getMemberPresence(member.user?.id || member.id);
         const location = getMemberLocation(member.user?.id || member.id);
         return (
           <div
             key={member.id}
-            className={`px-4 py-4 ${index !== members.length - 1 ? 'border-b border-gray-100' : ''}`}
+            className="flex items-center justify-between py-4 border-b border-gray-100 last:border-0"
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3 min-w-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="relative">
                 <Avatar src={member.user?.avatar} name={member.user?.name} size="lg" />
-                <div className="min-w-0">
-                  <p className="text-2xl font-semibold text-gray-900 truncate">{member.user?.name}</p>
-                  <p className="text-sm text-gray-500">{buildHandle(member)}</p>
-                  <p className="text-lg text-gray-700 mt-2">
-                    {presence.isOnline ? 'Online now' : `Active ${presence.lastSeenMinutes}m ago`}
-                  </p>
-                  <div className="mt-2 text-base text-gray-600 space-y-1">
-                    <p className="inline-flex items-center gap-2">
-                      <Clock3 className="w-4 h-4 text-gray-400" />
-                      {presence.isOnline ? 'Active now' : `Active ${presence.lastSeenMinutes}m ago`}
-                    </p>
-                    <p className="inline-flex items-center gap-2">
-                      <CalendarDays className="w-4 h-4 text-gray-400" />
-                      Joined {formatJoinedDate(member.joinedAt)}
-                    </p>
-                    <p className="text-sm text-gray-500">{location.city}</p>
-                  </div>
+                {presence.isOnline && (
+                  <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full" />
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-gray-900">{member.user?.name}</p>
+                <p className="text-sm text-gray-500">{buildHandle(member)}</p>
+                <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+                  <span>{presence.isOnline ? 'Online' : `${presence.lastSeenMinutes}m ago`}</span>
+                  <span>{location.city}</span>
+                  <span>Joined {formatJoinedDate(member.joinedAt)}</span>
                 </div>
               </div>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
-              >
-                CHAT <MessageCircle className="w-4 h-4" />
-              </button>
             </div>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors shrink-0"
+            >
+              <MessageCircle className="w-4 h-4" />
+              Chat
+            </button>
           </div>
         );
       })}
 
       {!members.length && (
-        <div className="px-4 py-10 text-center text-gray-500">
-          No members found for this course community yet.
+        <div className="py-16 text-center text-gray-500">
+          No members found.
         </div>
       )}
     </div>

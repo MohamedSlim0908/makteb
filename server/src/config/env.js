@@ -33,6 +33,12 @@ export const env = {
     appSecret: process.env.FACEBOOK_APP_SECRET || '',
   },
 
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+    apiKey: process.env.CLOUDINARY_API_KEY || '',
+    apiSecret: process.env.CLOUDINARY_API_SECRET || '',
+  },
+
   flouci: {
     appToken: process.env.FLOUCI_APP_TOKEN || '',
     appSecret: process.env.FLOUCI_APP_SECRET || '',

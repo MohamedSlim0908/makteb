@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from './lib/theme.jsx';
 import { AppLayout } from './components/layout/AppLayout';
+import { ProtectedRoute } from './components/layout/ProtectedRoute';
 
 const LandingPage = lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
@@ -16,6 +17,8 @@ const CoursePage = lazy(() => import('./pages/CoursePage').then(m => ({ default:
 const CourseLearnPage = lazy(() => import('./pages/CourseLearnPage').then(m => ({ default: m.CourseLearnPage })));
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const PreviewPage = lazy(() => import('./pages/PreviewPage').then(m => ({ default: m.PreviewPage })));
+const PaymentCallbackPage = lazy(() => import('./pages/PaymentCallbackPage').then(m => ({ default: m.PaymentCallbackPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,9 +42,12 @@ export default function App() {
                 <Route path="/community/:slug" element={<CommunityPage />} />
                 <Route path="/post/:id" element={<PostPage />} />
                 <Route path="/course/:id" element={<CoursePage />} />
-                <Route path="/course/:id/learn" element={<CourseLearnPage />} />
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/course/:id/learn" element={<ProtectedRoute><CourseLearnPage /></ProtectedRoute>} />
+                <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+                <Route path="/preview" element={<PreviewPage />} />
+                <Route path="/payment/success" element={<PaymentCallbackPage />} />
+                <Route path="/payment/fail" element={<PaymentCallbackPage />} />
               </Route>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
@@ -51,16 +57,15 @@ export default function App() {
           </Suspense>
         </BrowserRouter>
         <Toaster
-          position="top-right"
+          position="top-center"
           toastOptions={{
-            className: 'text-sm',
+            className: 'text-sm font-medium',
             style: {
-              background: 'var(--color-surface, #fff)',
-              color: 'var(--color-text, #111827)',
-              border: '1px solid var(--color-border, #e5e7eb)',
-              borderRadius: '12px',
-              padding: '12px 16px',
-              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.08)',
+              background: '#111',
+              color: '#fff',
+              borderRadius: '8px',
+              padding: '10px 16px',
+              boxShadow: '0 4px 24px rgba(0, 0, 0, 0.15)',
             },
           }}
         />

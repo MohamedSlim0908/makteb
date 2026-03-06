@@ -15,6 +15,9 @@ import courseRoutes from './modules/courses/course.routes.js';
 import lessonRoutes from './modules/courses/lesson.routes.js';
 import gamificationRoutes from './modules/gamification/gamification.routes.js';
 import paymentRoutes from './modules/payments/payment.routes.js';
+import notificationRoutes from './modules/notifications/notification.routes.js';
+import uploadRoutes from './modules/upload/upload.routes.js';
+import eventRoutes from './modules/events/event.routes.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -47,6 +50,9 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/lessons', lessonRoutes);
 app.use('/api/gamification', gamificationRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/events', eventRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
