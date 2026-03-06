@@ -69,7 +69,6 @@ export function CalendarMonthView({ communityId, isAdmin = false }) {
         setShowForm(false);
         toast.success('Event created!');
       },
-      onError: (err) => toast.error(err?.response?.data?.error || 'Failed to create event'),
     });
   }
 

@@ -141,7 +141,6 @@ export function CoursePage() {
           setPostCategory('GENERAL');
           toast.success('Post created!');
         },
-        onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to create post'),
       }
     );
   }
@@ -149,15 +148,12 @@ export function CoursePage() {
   function handleLike(postId) {
     if (!user) { toast.error('Sign in to like.'); return; }
     if (!isEnrolled) { toast.error('Enroll to interact.'); return; }
-    likeMutation.mutate(postId, {
-      onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to like'),
-    });
+    likeMutation.mutate(postId);
   }
 
   function doEnroll() {
     enrollMutation.mutate(undefined, {
       onSuccess: () => toast.success('You are now enrolled!'),
-      onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to enroll'),
     });
   }
 
@@ -248,7 +244,6 @@ export function CoursePage() {
                         onDelete={() => setDeletingPost(post)}
                         onTogglePin={() => togglePinMutation.mutate(post.id, {
                           onSuccess: () => toast.success(post.pinned ? 'Post unpinned' : 'Post pinned'),
-                          onError: () => toast.error('Failed to pin post'),
                         })}
                       />
                     ))}
@@ -331,7 +326,6 @@ export function CoursePage() {
           onClose={() => setEditingPost(null)}
           onSave={(data) => updatePostMutation.mutate(data, {
             onSuccess: () => { setEditingPost(null); toast.success('Post updated'); },
-            onError: () => toast.error('Failed to update post'),
           })}
         />
       )}
@@ -342,7 +336,6 @@ export function CoursePage() {
           onClose={() => setDeletingPost(null)}
           onConfirm={() => deletePostMutation.mutate(deletingPost.id, {
             onSuccess: () => { setDeletingPost(null); toast.success('Post deleted'); },
-            onError: () => toast.error('Failed to delete post'),
           })}
         />
       )}

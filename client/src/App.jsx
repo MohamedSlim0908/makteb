@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from './lib/theme.jsx';
 import { AppLayout } from './components/layout/AppLayout';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
+import { AdminRoute } from './components/layout/AdminRoute';
 
 const LandingPage = lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
@@ -19,6 +20,9 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ de
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const PreviewPage = lazy(() => import('./pages/PreviewPage').then(m => ({ default: m.PreviewPage })));
 const PaymentCallbackPage = lazy(() => import('./pages/PaymentCallbackPage').then(m => ({ default: m.PaymentCallbackPage })));
+const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
+const SearchPage = lazy(() => import('./pages/SearchPage').then(m => ({ default: m.SearchPage })));
+const CommunitySettingsPage = lazy(() => import('./pages/CommunitySettingsPage').then(m => ({ default: m.CommunitySettingsPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,6 +50,9 @@ export default function App() {
                 <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
                 <Route path="/preview" element={<PreviewPage />} />
+                <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
+                <Route path="/search" element={<SearchPage />} />
+                <Route path="/community/:slug/settings" element={<ProtectedRoute><CommunitySettingsPage /></ProtectedRoute>} />
                 <Route path="/payment/success" element={<PaymentCallbackPage />} />
                 <Route path="/payment/fail" element={<PaymentCallbackPage />} />
               </Route>

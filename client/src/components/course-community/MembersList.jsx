@@ -1,5 +1,7 @@
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Users } from 'lucide-react';
 import { Avatar } from '../ui/Avatar';
+import { Skeleton } from '../ui/Skeleton';
+import { EmptyState } from '../ui/EmptyState';
 import { getMemberLocation, getMemberPresence } from './mockData';
 
 function buildHandle(member) {
@@ -16,7 +18,15 @@ function formatJoinedDate(value) {
   });
 }
 
-export function MembersList({ members = [] }) {
+export function MembersList({ members = [], isLoading = false }) {
+  if (isLoading) {
+    return (
+      <div className="space-y-0">
+        {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} variant="member" />)}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-0">
       {members.map((member) => {
@@ -56,9 +66,11 @@ export function MembersList({ members = [] }) {
       })}
 
       {!members.length && (
-        <div className="py-16 text-center text-gray-500">
-          No members found.
-        </div>
+        <EmptyState
+          icon={Users}
+          title="No members yet"
+          description="Members will appear here once they join."
+        />
       )}
     </div>
   );

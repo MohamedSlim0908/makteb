@@ -8,6 +8,7 @@ import { env } from './config/env.js';
 import { initSocket } from './lib/socket.js';
 import { initPassport } from './modules/auth/passport.js';
 import { errorHandler } from './middleware/error-handler.js';
+import { authLimiter, paymentLimiter, uploadLimiter } from './middleware/rate-limit.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import communityRoutes from './modules/community/community.routes.js';
 import postRoutes from './modules/community/post.routes.js';
@@ -18,6 +19,7 @@ import paymentRoutes from './modules/payments/payment.routes.js';
 import notificationRoutes from './modules/notifications/notification.routes.js';
 import uploadRoutes from './modules/upload/upload.routes.js';
 import eventRoutes from './modules/events/event.routes.js';
+import adminRoutes from './modules/admin/admin.routes.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -35,7 +37,7 @@ app.use(
     credentials: true,
   })
 );
-app.use(morgan('dev'));
+app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -43,16 +45,17 @@ app.use(cookieParser());
 initPassport(app);
 initSocket(httpServer);
 
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/communities', communityRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/lessons', lessonRoutes);
 app.use('/api/gamification', gamificationRoutes);
-app.use('/api/payments', paymentRoutes);
+app.use('/api/payments', paymentLimiter, paymentRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/upload', uploadRoutes);
+app.use('/api/upload', uploadLimiter, uploadRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

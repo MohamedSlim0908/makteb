@@ -12,6 +12,7 @@ import {
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { EmptyState } from '../components/ui/EmptyState';
+import { Skeleton } from '../components/ui/Skeleton';
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
@@ -82,7 +83,6 @@ function CourseModules({ courseId, isExpanded, showAddLesson, setShowAddLesson, 
                             setLessonForm({ title: '', content: '', videoUrl: '' });
                             toast.success('Lesson added!');
                           },
-                          onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to add lesson'),
                         }
                       );
                     }
@@ -122,7 +122,7 @@ export function DashboardPage() {
   const [moduleForm, setModuleForm] = useState({ title: '' });
   const [lessonForm, setLessonForm] = useState({ title: '', content: '', videoUrl: '' });
 
-  const { data: communitiesData } = useCommunities();
+  const { data: communitiesData, isLoading: communitiesLoading } = useCommunities();
 
   const myCommunities = communitiesData?.communities?.filter(
     (c) => (c.creatorId ?? c.creator?.id) === user?.id
@@ -130,7 +130,7 @@ export function DashboardPage() {
   const hasCommunities = myCommunities.length > 0;
   const activeCommunityId = selectedCommunity || myCommunities[0]?.id;
 
-  const { data: courses = [] } = useCourses(activeCommunityId);
+  const { data: courses = [], isLoading: coursesLoading } = useCourses(activeCommunityId);
 
   const { data: earnings } = useEarnings(activeCommunityId);
 
@@ -138,6 +138,21 @@ export function DashboardPage() {
   const createCourseMutation = useCreateCourse(activeCommunityId);
   const createModuleMutation = useCreateModule(activeCommunityId);
   const createLessonMutation = useCreateLesson(activeCommunityId);
+
+  if (communitiesLoading) {
+    return (
+      <div className="min-h-[calc(100dvh-3.5rem)] bg-white">
+        <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+          <div className="h-8 bg-gray-100 rounded w-40 animate-pulse" />
+          <div className="flex flex-wrap gap-2">
+            {[1, 2].map((i) => <div key={i} className="h-10 bg-gray-100 rounded-lg w-36 animate-pulse" />)}
+          </div>
+          <Skeleton variant="dashboard" />
+          <Skeleton variant="dashboard" />
+        </div>
+      </div>
+    );
+  }
 
   if (!hasCommunities) {
     return (
@@ -165,7 +180,6 @@ export function DashboardPage() {
                   setCommunityForm({ name: '', description: '', visibility: 'PUBLIC', category: '' });
                   toast.success('Community created!');
                 },
-                onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to create community'),
               }); }}
               className="mt-8 space-y-4 max-w-sm mx-auto"
             >
@@ -253,7 +267,6 @@ export function DashboardPage() {
                       setCourseForm({ title: '', description: '', price: 0 });
                       toast.success('Course added!');
                     },
-                    onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to add course'),
                   }); }}
                   className="p-4 bg-gray-50 rounded-xl space-y-3"
                 >
@@ -267,7 +280,20 @@ export function DashboardPage() {
                 </form>
               )}
 
-              {courses.length === 0 && !showAddCourse && (
+              {coursesLoading && (
+                <div className="space-y-3">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="border border-gray-200 rounded-xl p-4 animate-pulse">
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 bg-gray-100 rounded w-48" />
+                        <div className="h-3 bg-gray-100 rounded w-16" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!coursesLoading && courses.length === 0 && !showAddCourse && (
                 <p className="text-sm text-gray-400 py-4 text-center">No courses yet.</p>
               )}
 
@@ -306,7 +332,6 @@ export function DashboardPage() {
                               setModuleForm({ title: '' });
                               toast.success('Module added!');
                             },
-                            onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to add module'),
                           });
                         }}
                         className="p-4 border-t border-gray-200 bg-gray-50 flex gap-2"

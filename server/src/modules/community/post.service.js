@@ -4,6 +4,7 @@ import { AppError } from '../../middleware/error-handler.js';
 import { USER_PUBLIC_SELECT, MODERATOR_ROLES } from '../../lib/db-selects.js';
 import { awardPoints } from '../gamification/gamification.service.js';
 import { sendNotification } from '../notifications/notification.service.js';
+import { sanitizeRichText } from '../../lib/sanitize.js';
 
 export async function listCommunityPosts(communityId, { skip, take, page, category, viewerUserId }) {
   const where = { communityId };
@@ -88,7 +89,7 @@ export async function createPost(authorId, { communityId, title, content, type, 
       communityId,
       authorId,
       title,
-      content,
+      content: sanitizeRichText(content),
       type: type || 'DISCUSSION',
       category: category || 'GENERAL',
     },
@@ -111,7 +112,7 @@ export async function updatePost(authorId, postId, data) {
   const { title, content, type, category } = data;
   return prisma.post.update({
     where: { id: postId },
-    data: { title, content, type, category },
+    data: { title, content: sanitizeRichText(content), type, category },
     include: {
       author: { select: USER_PUBLIC_SELECT },
       _count: { select: { comments: true, likes: true } },
@@ -199,7 +200,7 @@ export async function addComment(authorId, postId, { content, parentId }) {
   if (!membership) throw new AppError('Must be a member to comment', 403);
 
   const comment = await prisma.comment.create({
-    data: { postId, authorId, content, parentId: parentId || null },
+    data: { postId, authorId, content: sanitizeRichText(content), parentId: parentId || null },
     include: { author: { select: USER_PUBLIC_SELECT } },
   });
 

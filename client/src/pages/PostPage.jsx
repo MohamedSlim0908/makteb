@@ -57,11 +57,31 @@ export function PostPage() {
 
   const toggleLikeMutation = useMutation({
     mutationFn: () => api.post(`/posts/${id}/like`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['post', id] }),
-    onError: () => toast.error('Failed to like post'),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['post', id] });
+      const previousPost = queryClient.getQueryData(['post', id]);
+      queryClient.setQueryData(['post', id], (old) => {
+        if (!old) return old;
+        const p = old.post || old;
+        const updated = {
+          ...p,
+          isLiked: !p.isLiked,
+          likeCount: p.isLiked ? Math.max(0, (p.likeCount || 0) - 1) : (p.likeCount || 0) + 1,
+        };
+        return old.post ? { ...old, post: updated } : updated;
+      });
+      return { previousPost };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousPost) {
+        queryClient.setQueryData(['post', id], context.previousPost);
+      }
+      toast.error('Failed to like post');
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['post', id] }),
   });
 
-  const addCommentMutation = useAddComment(id);
+  const addCommentMutation = useAddComment(id, user);
 
   if (isLoading || !post) return <PageSpinner />;
 
@@ -95,7 +115,6 @@ export function PostPage() {
                   queryClient.invalidateQueries({ queryKey: ['post', id] });
                   toast.success(post.pinned ? 'Post unpinned' : 'Post pinned');
                 },
-                onError: () => toast.error('Failed to pin post'),
               })}
             />
           </div>
@@ -147,7 +166,6 @@ export function PostPage() {
                         { content: commentContent.trim() },
                         {
                           onSuccess: () => { setCommentContent(''); toast.success('Comment added'); },
-                          onError: () => toast.error('Failed to add comment'),
                         }
                       );
                     }}
@@ -206,7 +224,6 @@ export function PostPage() {
                                   { content: replyContent.trim(), parentId: comment.id },
                                   {
                                     onSuccess: () => { setReplyingTo(null); setReplyContent(''); },
-                                    onError: () => toast.error('Failed to add reply'),
                                   }
                                 );
                               }}
@@ -260,7 +277,6 @@ export function PostPage() {
               queryClient.invalidateQueries({ queryKey: ['post', id] });
               toast.success('Post updated');
             },
-            onError: () => toast.error('Failed to update post'),
           })}
         />
       )}
@@ -275,7 +291,6 @@ export function PostPage() {
               toast.success('Post deleted');
               navigate(-1);
             },
-            onError: () => toast.error('Failed to delete post'),
           })}
         />
       )}

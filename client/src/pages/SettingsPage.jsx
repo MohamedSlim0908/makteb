@@ -25,7 +25,6 @@ function SettingsForm({ user }) {
       { name, bio: bio || undefined, avatar: avatar || undefined },
       {
         onSuccess: () => toast.success('Profile updated'),
-        onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to update profile'),
       }
     );
   }
