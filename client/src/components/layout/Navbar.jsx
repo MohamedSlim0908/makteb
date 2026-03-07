@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useLocation, useMatch } from 'react-router-dom';
+import { Link, useLocation, useMatch, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Bell,
@@ -15,12 +15,16 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useNotificationSocket } from '../../hooks/useNotificationSocket';
 import { api } from '../../lib/api';
+import { useUnreadCount } from '../../features/notifications/useUnreadCount';
+import { NotificationPanel } from './NotificationPanel';
 import { Avatar } from '../ui/Avatar';
 
 export function Navbar() {
   const { user, logout } = useAuth();
   const { pathname, search } = useLocation();
+  const navigate = useNavigate();
 
   const courseMatch1 = useMatch('/course/:id');
   const courseMatch2 = useMatch('/course/:id/*');
@@ -39,11 +43,17 @@ export function Navbar() {
   const [isBrandMenuOpen, setIsBrandMenuOpen] = useState(false);
   const [brandMenuSearch, setBrandMenuSearch] = useState('');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [shellSearch, setShellSearch] = useState('');
 
   const brandMenuRef = useRef(null);
   const userMenuRef = useRef(null);
+  const notificationPanelRef = useRef(null);
+
+  useNotificationSocket(user?.id);
+
+  const { data: unreadCount = 0 } = useUnreadCount(Boolean(user));
 
   const { data: courseBrand } = useQuery({
     queryKey: ['navbar-course-brand', courseId],
@@ -97,12 +107,16 @@ export function Navbar() {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
         setIsUserMenuOpen(false);
       }
+      if (notificationPanelRef.current && !notificationPanelRef.current.contains(e.target)) {
+        setIsNotificationPanelOpen(false);
+      }
     }
     function handleEscape(e) {
       if (e.key === 'Escape') {
         setIsBrandMenuOpen(false);
         setBrandMenuSearch('');
         setIsUserMenuOpen(false);
+        setIsNotificationPanelOpen(false);
         setIsMobileMenuOpen(false);
       }
     }
@@ -115,12 +129,14 @@ export function Navbar() {
   }, []);
 
   // Close menus on navigation using key-based reset
-  const [menuKey, setMenuKey] = useState(pathname);
-  if (menuKey !== pathname) {
-    setMenuKey(pathname);
+  const navigationKey = `${pathname}${search}`;
+  const [menuKey, setMenuKey] = useState(navigationKey);
+  if (menuKey !== navigationKey) {
+    setMenuKey(navigationKey);
     setIsBrandMenuOpen(false);
     setBrandMenuSearch('');
     setIsUserMenuOpen(false);
+    setIsNotificationPanelOpen(false);
     setIsMobileMenuOpen(false);
   }
 
@@ -176,6 +192,18 @@ export function Navbar() {
   const activeCommunityTab = availableCommunityTabs.some((tab) => tab.id === requestedCommunityTab)
     ? requestedCommunityTab
     : defaultCommunityTab;
+
+  function handleMessagesClick() {
+    navigate('/settings?section=chat');
+  }
+
+  function toggleNotificationsPanel() {
+    setIsNotificationPanelOpen((open) => !open);
+    setIsUserMenuOpen(false);
+    setIsBrandMenuOpen(false);
+    setBrandMenuSearch('');
+    setIsMobileMenuOpen(false);
+  }
 
   function renderUserDropdown() {
     if (!user || !isUserMenuOpen) return null;
@@ -258,14 +286,17 @@ export function Navbar() {
               </div>
             </Link>
 
-            <div ref={brandMenuRef} className="relative hidden md:block">
+            <div ref={brandMenuRef} className="relative hidden md:flex items-center gap-1.5 min-w-0">
+              <span className="font-semibold text-sm text-gray-900 truncate max-w-[220px]">
+                {brandName}
+              </span>
               <button
                 type="button"
                 onClick={() => setIsBrandMenuOpen((open) => !open)}
                 aria-expanded={isBrandMenuOpen}
-                className="flex items-center gap-1 text-gray-900 hover:text-primary-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-md px-1.5 py-1"
+                aria-label="Toggle navigation menu"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center text-gray-500 hover:text-primary-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-md"
               >
-                <span className="font-semibold text-sm truncate max-w-[220px]">{brandName}</span>
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isBrandMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
@@ -358,13 +389,29 @@ export function Navbar() {
             </button>
             {user ? (
               <>
-                <button className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors">
+                <button
+                  type="button"
+                  onClick={handleMessagesClick}
+                  aria-label="Open messages"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                >
                   <MessageCircle className="w-[18px] h-[18px]" />
                 </button>
-                <button className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors relative">
-                  <Bell className="w-[18px] h-[18px]" />
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-                </button>
+                <div ref={notificationPanelRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={toggleNotificationsPanel}
+                    aria-label="Open notifications"
+                    aria-expanded={isNotificationPanelOpen}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors relative"
+                  >
+                    <Bell className="w-[18px] h-[18px]" />
+                    {unreadCount > 0 && (
+                      <span className="absolute top-1 right-1 min-w-2 h-2 rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white" />
+                    )}
+                  </button>
+                  {isNotificationPanelOpen && <NotificationPanel onClose={() => setIsNotificationPanelOpen(false)} />}
+                </div>
                 <div ref={userMenuRef} className="relative ml-1">
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
@@ -425,14 +472,15 @@ export function Navbar() {
             </div>
           </Link>
 
-          <div ref={brandMenuRef} className="relative hidden md:block">
+          <div ref={brandMenuRef} className="relative hidden md:flex items-center gap-1.5">
+            <span className="font-semibold text-sm text-gray-900">{brandName}</span>
             <button
               type="button"
               onClick={() => setIsBrandMenuOpen((open) => !open)}
               aria-expanded={isBrandMenuOpen}
-              className="flex items-center gap-1 text-gray-900 hover:text-primary-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-md px-1.5 py-1"
+              aria-label="Toggle navigation menu"
+              className="inline-flex h-8 w-8 items-center justify-center text-gray-500 hover:text-primary-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-md"
             >
-              <span className="font-semibold text-sm">{brandName}</span>
               <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isBrandMenuOpen ? 'rotate-180' : ''}`} />
             </button>
 
@@ -521,13 +569,31 @@ export function Navbar() {
                 Discover
               </Link>
 
-              <button className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors">
+              <button
+                type="button"
+                onClick={handleMessagesClick}
+                aria-label="Open messages"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+              >
                 <MessageCircle className="w-[18px] h-[18px]" />
               </button>
-              <button className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors relative">
-                <Bell className="w-[18px] h-[18px]" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
-              </button>
+              <div ref={notificationPanelRef} className="relative">
+                <button
+                  type="button"
+                  onClick={toggleNotificationsPanel}
+                  aria-label="Open notifications"
+                  aria-expanded={isNotificationPanelOpen}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors relative"
+                >
+                  <Bell className="w-[18px] h-[18px]" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+                {isNotificationPanelOpen && <NotificationPanel onClose={() => setIsNotificationPanelOpen(false)} />}
+              </div>
 
               <div ref={userMenuRef} className="relative ml-1">
                 <button

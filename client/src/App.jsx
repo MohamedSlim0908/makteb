@@ -11,6 +11,9 @@ const RegisterPage = lazy(() => import('./pages/RegisterPage').then(m => ({ defa
 const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage').then(m => ({ default: m.AuthCallbackPage })));
 const DiscoverPage = lazy(() => import('./pages/DiscoverPage').then(m => ({ default: m.DiscoverPage })));
 const CommunityPage = lazy(() => import('./pages/CommunityPage').then(m => ({ default: m.CommunityPage })));
+const CommunitySettingsPage = lazy(() =>
+  import('./pages/CommunitySettingsPage').then(m => ({ default: m.CommunitySettingsPage }))
+);
 const PostPage = lazy(() => import('./pages/PostPage').then(m => ({ default: m.PostPage })));
 const CoursePage = lazy(() => import('./pages/CoursePage').then(m => ({ default: m.CoursePage })));
 const CourseLearnPage = lazy(() => import('./pages/CourseLearnPage').then(m => ({ default: m.CourseLearnPage })));
@@ -43,6 +46,7 @@ export default function App() {
                 <Route path="/landing" element={<LandingPage />} />
                 <Route path="/discover" element={<DiscoverPage />} />
                 <Route path="/community/:slug" element={<CommunityPage />} />
+                <Route path="/community/:slug/settings" element={<CommunitySettingsPage />} />
                 <Route path="/post/:id" element={<PostPage />} />
                 <Route path="/course/:id" element={<CoursePage />} />
                 <Route path="/course/:id/learn" element={<CourseLearnPage />} />

@@ -15,13 +15,21 @@ vi.mock('../../lib/db-selects.js', () => ({
 }));
 
 vi.mock('./auth.utils.js', () => ({
+  comparePassword: vi.fn(),
   hashPassword: vi.fn(),
   verifyRefreshToken: vi.fn(),
 }));
 
 import { prisma } from '../../lib/prisma.js';
-import { hashPassword, verifyRefreshToken } from './auth.utils.js';
-import { registerUser, resolveRefreshToken, getCurrentUser, updateUserProfile } from './auth.service.js';
+import { comparePassword, hashPassword, verifyRefreshToken } from './auth.utils.js';
+import {
+  registerUser,
+  resolveRefreshToken,
+  getCurrentUser,
+  updateUserProfile,
+  updateUserEmail,
+  updateUserPassword,
+} from './auth.service.js';
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -139,5 +147,74 @@ describe('updateUserProfile()', () => {
       })
     );
     expect(result.name).toBe('New Name');
+  });
+});
+
+describe('updateUserEmail()', () => {
+  it('updates email after verifying current password', async () => {
+    prisma.user.findUnique
+      .mockResolvedValueOnce(MOCK_USER)
+      .mockResolvedValueOnce(null);
+    comparePassword.mockResolvedValue(true);
+    prisma.user.update.mockResolvedValue({ ...MOCK_USER, email: 'new@makteb.tn' });
+
+    const result = await updateUserEmail('user-1', {
+      email: 'new@makteb.tn',
+      currentPassword: 'secret123',
+    });
+
+    expect(comparePassword).toHaveBeenCalledWith('secret123', MOCK_USER.passwordHash);
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: { email: 'new@makteb.tn' },
+      select: { id: true, email: true, name: true, role: true, avatar: true, bio: true },
+    });
+    expect(result.email).toBe('new@makteb.tn');
+  });
+
+  it('throws when email is already registered', async () => {
+    prisma.user.findUnique
+      .mockResolvedValueOnce(MOCK_USER)
+      .mockResolvedValueOnce({ id: 'user-2', email: 'new@makteb.tn' });
+    comparePassword.mockResolvedValue(true);
+
+    await expect(
+      updateUserEmail('user-1', { email: 'new@makteb.tn', currentPassword: 'secret123' })
+    ).rejects.toThrow('Email already registered');
+  });
+});
+
+describe('updateUserPassword()', () => {
+  it('updates password when current password is valid', async () => {
+    prisma.user.findUnique.mockResolvedValue(MOCK_USER);
+    comparePassword
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false);
+    hashPassword.mockResolvedValue('$2b$12$newhash');
+
+    await updateUserPassword('user-1', {
+      currentPassword: 'secret123',
+      newPassword: 'newpassword123',
+    });
+
+    expect(hashPassword).toHaveBeenCalledWith('newpassword123');
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: { passwordHash: '$2b$12$newhash' },
+    });
+  });
+
+  it('throws when the new password matches the current password', async () => {
+    prisma.user.findUnique.mockResolvedValue(MOCK_USER);
+    comparePassword
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(true);
+
+    await expect(
+      updateUserPassword('user-1', {
+        currentPassword: 'secret123',
+        newPassword: 'secret123',
+      })
+    ).rejects.toThrow('New password must be different');
   });
 });

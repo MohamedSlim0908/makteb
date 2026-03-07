@@ -22,6 +22,16 @@ const updateProfileSchema = z.object({
   avatar: z.string().url().optional(),
 });
 
+const updateEmailSchema = z.object({
+  email: z.string().email(),
+  currentPassword: z.string().min(1),
+});
+
+const updatePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8),
+});
+
 function handleOAuthCallback(res, err, user) {
   if (err || !user) {
     res.redirect(`${env.clientUrl}/login?error=auth_failed`);
@@ -63,6 +73,16 @@ router.get('/me', requireAuth, async (req, res) => {
 router.put('/me', requireAuth, validate(updateProfileSchema), async (req, res) => {
   const user = await authService.updateUserProfile(req.userId, req.body);
   res.json({ user });
+});
+
+router.put('/email', requireAuth, validate(updateEmailSchema), async (req, res) => {
+  const user = await authService.updateUserEmail(req.userId, req.body);
+  res.json({ user });
+});
+
+router.put('/password', requireAuth, validate(updatePasswordSchema), async (req, res) => {
+  await authService.updateUserPassword(req.userId, req.body);
+  res.json({ message: 'Password updated' });
 });
 
 router.post('/logout', (_req, res) => {

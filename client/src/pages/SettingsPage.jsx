@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ChevronDown,
@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { useAuth } from '../hooks/useAuth';
-import { api } from '../lib/api';
+import { api, getErrorMessage } from '../lib/api';
 import toast from 'react-hot-toast';
 
 const SETTINGS_SECTIONS = [
@@ -42,6 +42,9 @@ const STORAGE_KEYS = {
   socialLinks: 'settings_social_links',
   membershipVisibility: 'settings_membership_visibility',
   paymentMethods: 'settings_payment_methods',
+  myersBriggs: 'settings_myers_briggs',
+  timezone: 'settings_timezone',
+  payoutSettings: 'settings_payout_settings',
 };
 
 const DEFAULT_NOTIFICATION_SETTINGS = {
@@ -53,11 +56,19 @@ const DEFAULT_NOTIFICATION_SETTINGS = {
   email: true,
 };
 
-const DEFAULT_PAYMENT_METHODS = [
-  { id: 'pm-visa-0019', brand: 'VISA', last4: '0019', expiry: '09/2029' },
+const COMMUNITY_NOTIFICATION_LEVELS = ['All', 'Mentions', 'Muted'];
+const DEFAULT_SOCIAL_LINKS = { website: '', x: '', youtube: '' };
+const DEFAULT_MYERS_BRIGGS = "Don't show";
+const DEFAULT_MEMBERSHIP_VISIBILITY = 'Public';
+const TIMEZONE_OPTIONS = [
+  { value: 'Africa/Tunis', label: '(GMT +01:00) Africa/Tunis' },
+  { value: 'UTC', label: '(GMT +00:00) UTC' },
+  { value: 'Europe/Berlin', label: '(GMT +02:00) Europe/Berlin' },
 ];
 
-const COMMUNITY_NOTIFICATION_LEVELS = ['All', 'Mentions', 'Muted'];
+function isValidSettingsSection(sectionId) {
+  return SETTINGS_SECTIONS.some((section) => section.id === sectionId);
+}
 
 function readStoredObject(key, fallback) {
   try {
@@ -92,14 +103,6 @@ function splitName(fullName = '') {
   return { first: parts[0], last: parts.slice(1).join(' ') };
 }
 
-function slugFromName(name = '') {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
 function Toggle({ checked, onChange }) {
   return (
     <button
@@ -121,19 +124,37 @@ function Toggle({ checked, onChange }) {
 
 export function SettingsPage() {
   const { user, fetchUser, logout } = useAuth();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [activeSection, setActiveSection] = useState('profile');
+
   if (!user) return null;
+
+  return <SettingsPageContent user={user} fetchUser={fetchUser} logout={logout} />;
+}
+
+function SettingsPageContent({ user, fetchUser, logout }) {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
+  const activeSectionParam = searchParams.get('section');
+  const activeSection = isValidSettingsSection(activeSectionParam) ? activeSectionParam : 'profile';
+
+  function handleSectionChange(sectionId) {
+    const next = new URLSearchParams(searchParams);
+    if (sectionId === 'profile') {
+      next.delete('section');
+    } else {
+      next.set('section', sectionId);
+    }
+    setSearchParams(next);
+  }
 
   const initialName = splitName(user.name);
   const [firstName, setFirstName] = useState(initialName.first);
   const [lastName, setLastName] = useState(initialName.last);
   const [bio, setBio] = useState(user.bio || '');
   const [location, setLocation] = useState(() => localStorage.getItem(STORAGE_KEYS.location) || '');
-  const [myersBriggs, setMyersBriggs] = useState("Don't show");
-  const [affiliateMode, setAffiliateMode] = useState('platform');
-  const [affiliateStatusFilter, setAffiliateStatusFilter] = useState('Active');
+  const [myersBriggs, setMyersBriggs] = useState(
+    () => localStorage.getItem(STORAGE_KEYS.myersBriggs) || DEFAULT_MYERS_BRIGGS
+  );
   const [theme, setTheme] = useState(() => localStorage.getItem(STORAGE_KEYS.theme) || 'Light (default)');
   const [notificationSettings, setNotificationSettings] = useState(() =>
     readStoredObject(STORAGE_KEYS.notificationSettings, DEFAULT_NOTIFICATION_SETTINGS)
@@ -151,19 +172,29 @@ export function SettingsPage() {
     readStoredObject(STORAGE_KEYS.communityNotificationMode, {})
   );
   const [socialLinks, setSocialLinks] = useState(() =>
-    readStoredObject(STORAGE_KEYS.socialLinks, { website: '', x: '', youtube: '' })
+    readStoredObject(STORAGE_KEYS.socialLinks, DEFAULT_SOCIAL_LINKS)
   );
   const [membershipVisibility, setMembershipVisibility] = useState(
-    () => localStorage.getItem(STORAGE_KEYS.membershipVisibility) || 'Public'
+    () => localStorage.getItem(STORAGE_KEYS.membershipVisibility) || DEFAULT_MEMBERSHIP_VISIBILITY
+  );
+  const [timezone, setTimezone] = useState(
+    () =>
+      localStorage.getItem(STORAGE_KEYS.timezone) ||
+      TIMEZONE_OPTIONS.find((option) => option.value === Intl.DateTimeFormat().resolvedOptions().timeZone)?.value ||
+      'UTC'
+  );
+  const [payoutSettings, setPayoutSettings] = useState(() =>
+    readStoredObject(STORAGE_KEYS.payoutSettings, {
+      method: '',
+      destination: '',
+    })
   );
   const [profilePanelOpen, setProfilePanelOpen] = useState({
     social: false,
     membership: false,
     advanced: false,
   });
-  const [paymentMethods, setPaymentMethods] = useState(() =>
-    readStoredArray(STORAGE_KEYS.paymentMethods, DEFAULT_PAYMENT_METHODS)
-  );
+  const [paymentMethods, setPaymentMethods] = useState(() => readStoredArray(STORAGE_KEYS.paymentMethods, []));
 
   useEffect(() => {
     const parsed = splitName(user.name);
@@ -215,6 +246,29 @@ export function SettingsPage() {
       toast.success('Profile updated');
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to update profile'),
+  });
+
+  const updateEmailMutation = useMutation({
+    mutationFn: async (payload) => {
+      const { data } = await api.put('/auth/email', payload);
+      return data.user;
+    },
+    onSuccess: async () => {
+      await fetchUser();
+      toast.success('Email updated');
+    },
+    onError: (err) => toast.error(getErrorMessage(err, 'Failed to update email')),
+  });
+
+  const updatePasswordMutation = useMutation({
+    mutationFn: async (payload) => {
+      const { data } = await api.put('/auth/password', payload);
+      return data;
+    },
+    onSuccess: () => {
+      toast.success('Password updated');
+    },
+    onError: (err) => toast.error(getErrorMessage(err, 'Failed to update password')),
   });
 
   const communities = useMemo(() => {
@@ -311,12 +365,24 @@ export function SettingsPage() {
   }, [socialLinks]);
 
   useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.myersBriggs, myersBriggs);
+  }, [myersBriggs]);
+
+  useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.membershipVisibility, membershipVisibility);
   }, [membershipVisibility]);
 
   useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.timezone, timezone);
+  }, [timezone]);
+
+  useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.paymentMethods, JSON.stringify(paymentMethods));
   }, [paymentMethods]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.payoutSettings, JSON.stringify(payoutSettings));
+  }, [payoutSettings]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -332,10 +398,17 @@ export function SettingsPage() {
     root.classList.remove('dark');
   }, [theme]);
 
-  const profileUrl = `skool.com/@${slugFromName(`${firstName} ${lastName}`) || 'username'}`;
-  const affiliateUrl = 'https://www.skool.com/signup?ref=cd7fe65010dc4e7c9d3f7a3371bd77ab';
+  const profileUrl = '';
+  const affiliateCommunity = createdCommunities[0] || communities[0] || null;
+  const affiliateCommunityLabel = affiliateCommunity?.name || '';
+  const affiliateUrl = affiliateCommunity ? `${window.location.origin}/community/${affiliateCommunity.slug}` : '';
 
   function copyAffiliateLink() {
+    if (!affiliateUrl) {
+      toast('No affiliate link available yet');
+      return;
+    }
+
     navigator.clipboard
       .writeText(affiliateUrl)
       .then(() => toast.success('Affiliate link copied'))
@@ -415,6 +488,18 @@ export function SettingsPage() {
     setProfilePanelOpen((current) => ({ ...current, [panelId]: !current[panelId] }));
   }
 
+  function handleResetLocalProfileSettings() {
+    localStorage.removeItem(STORAGE_KEYS.location);
+    localStorage.removeItem(STORAGE_KEYS.socialLinks);
+    localStorage.removeItem(STORAGE_KEYS.membershipVisibility);
+    localStorage.removeItem(STORAGE_KEYS.myersBriggs);
+    setLocation('');
+    setSocialLinks(DEFAULT_SOCIAL_LINKS);
+    setMembershipVisibility(DEFAULT_MEMBERSHIP_VISIBILITY);
+    setMyersBriggs(DEFAULT_MYERS_BRIGGS);
+    toast.success('Advanced local profile settings reset');
+  }
+
   function handleCommunityVisibilityToggle(community) {
     setCommunityVisibility((current) => {
       const isVisible = current[community.id] !== false;
@@ -433,13 +518,6 @@ export function SettingsPage() {
     });
   }
 
-  function cycleAffiliateStatusFilter() {
-    setAffiliateStatusFilter((current) => {
-      const next = current === 'Active' ? 'Archived' : 'Active';
-      return next;
-    });
-  }
-
   function handleChangeEmail() {
     const next = window.prompt('Enter your new email address:', user.email || '');
     if (next === null) return;
@@ -453,11 +531,47 @@ export function SettingsPage() {
       toast.error('Please enter a valid email');
       return;
     }
-    toast('Email change is not available yet. Contact support to update email.');
+    if (email === user.email) {
+      toast('Email is unchanged');
+      return;
+    }
+
+    const currentPassword = window.prompt('Enter your current password to confirm this change:', '');
+    if (currentPassword === null) return;
+    if (!currentPassword.trim()) {
+      toast.error('Current password is required');
+      return;
+    }
+
+    void updateEmailMutation.mutateAsync({ email, currentPassword: currentPassword.trim() });
   }
 
   function handleChangePassword() {
-    toast('Password change endpoint is not available yet.');
+    const currentPassword = window.prompt('Enter your current password:', '');
+    if (currentPassword === null) return;
+    if (!currentPassword.trim()) {
+      toast.error('Current password is required');
+      return;
+    }
+
+    const newPassword = window.prompt('Enter your new password (minimum 8 characters):', '');
+    if (newPassword === null) return;
+    if (newPassword.length < 8) {
+      toast.error('New password must be at least 8 characters long');
+      return;
+    }
+
+    const confirmPassword = window.prompt('Confirm your new password:', '');
+    if (confirmPassword === null) return;
+    if (newPassword !== confirmPassword) {
+      toast.error('Password confirmation does not match');
+      return;
+    }
+
+    void updatePasswordMutation.mutateAsync({
+      currentPassword: currentPassword.trim(),
+      newPassword,
+    });
   }
 
   async function handleLogoutEverywhere() {
@@ -476,14 +590,14 @@ export function SettingsPage() {
   }
 
   function handleAddPaymentMethod() {
-    const brand = (window.prompt('Card brand (e.g., VISA):', 'VISA') || '').trim().toUpperCase();
+    const brand = (window.prompt('Card brand:', '') || '').trim().toUpperCase();
     if (!brand) return;
     const last4 = (window.prompt('Last 4 digits:', '') || '').trim();
     if (!/^\d{4}$/.test(last4)) {
       toast.error('Last 4 digits must be exactly 4 numbers');
       return;
     }
-    const expiry = (window.prompt('Expiry (MM/YYYY):', '12/2030') || '').trim();
+    const expiry = (window.prompt('Expiry (MM/YYYY):', '') || '').trim();
     if (!/^\d{2}\/\d{4}$/.test(expiry)) {
       toast.error('Expiry must be in MM/YYYY format');
       return;
@@ -503,7 +617,29 @@ export function SettingsPage() {
   }
 
   function handlePayoutSettingsClick() {
-    toast('Payout settings are coming soon');
+    const methodInput = window.prompt('Enter your payout method:', payoutSettings.method || '');
+    if (methodInput === null) return;
+
+    const method = methodInput.trim();
+    if (!method) {
+      toast.error('Payout method is required');
+      return;
+    }
+
+    const destinationInput = window.prompt(
+      'Enter your payout destination (email, IBAN, or account reference):',
+      payoutSettings.destination || ''
+    );
+    if (destinationInput === null) return;
+
+    const destination = destinationInput.trim();
+    if (!destination) {
+      toast.error('Payout destination is required');
+      return;
+    }
+
+    setPayoutSettings({ method, destination });
+    toast.success('Payout settings saved');
   }
 
   function handlePaymentHistorySettingsClick() {
@@ -546,7 +682,7 @@ export function SettingsPage() {
                   <button
                     key={section.id}
                     type="button"
-                    onClick={() => setActiveSection(section.id)}
+                    onClick={() => handleSectionChange(section.id)}
                     className={`w-full rounded-xl px-4 py-2.5 text-left text-lg font-semibold transition-colors ${
                       isActive ? 'bg-[#f2deaa] text-gray-900' : 'text-gray-900 hover:bg-gray-100'
                     }`}
@@ -574,7 +710,7 @@ export function SettingsPage() {
 
                       <div className="flex items-center gap-3 shrink-0">
                         <Link
-                          to={`/community/${community.slug}`}
+                          to={`/community/${community.slug}/settings`}
                           className="inline-flex h-10 min-w-[120px] items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
                         >
                           SETTINGS
@@ -671,11 +807,12 @@ export function SettingsPage() {
                 <input
                   value={profileUrl}
                   readOnly
+                  placeholder="No public profile URL yet"
                   className="w-full h-12 rounded-md border border-gray-300 px-3 text-gray-400 bg-gray-50"
                 />
               </div>
               <p className="text-sm text-gray-500">
-                You can change your URL once you&apos;ve got 90 contributions, 30 followers, and been using it for 90 days.
+                Public profile URLs are not configured for this account yet.
               </p>
 
               <div>
@@ -798,11 +935,7 @@ export function SettingsPage() {
                     <div className="mt-3">
                       <button
                         type="button"
-                        onClick={() => {
-                          localStorage.removeItem(STORAGE_KEYS.location);
-                          setLocation('');
-                          toast.success('Advanced local profile settings reset');
-                        }}
+                        onClick={handleResetLocalProfileSettings}
                         className="h-11 rounded-md border border-gray-300 px-4 text-sm font-semibold text-gray-600 hover:bg-gray-50"
                       >
                         RESET LOCAL PROFILE SETTINGS
@@ -828,93 +961,49 @@ export function SettingsPage() {
               <div>
                 <h1 className="text-3xl font-semibold text-gray-900">Affiliates</h1>
                 <p className="mt-2 text-lg text-gray-700">
-                  Earn commission for life when you invite somebody to create or join a Skool community.
+                  Share your real community link when you want to invite new members.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="rounded-xl border border-gray-200 p-4 text-center">
-                  <p className="text-4xl font-bold">$0</p>
-                  <p className="text-sm text-gray-500">Last 30 days</p>
-                </div>
-                <div className="rounded-xl border border-gray-200 p-4 text-center">
-                  <p className="text-4xl font-bold">$0</p>
-                  <p className="text-sm text-gray-500">Lifetime</p>
-                </div>
-                <div className="rounded-xl border border-gray-200 p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-4xl font-bold text-emerald-600">$0</p>
-                      <p className="text-sm text-gray-500">Account balance</p>
-                    </div>
-                    <button
-                      type="button"
-                      className="h-12 px-6 rounded-md bg-gray-200 text-gray-500 font-semibold cursor-not-allowed"
-                      disabled
-                    >
-                      PAYOUT
-                    </button>
+              {affiliateCommunity ? (
+                <>
+                  <div className="rounded-xl border border-gray-200 p-4">
+                    <p className="text-sm text-gray-500">Community</p>
+                    <p className="mt-1 text-lg font-semibold text-gray-900">{affiliateCommunityLabel}</p>
+                    <p className="mt-2 text-sm text-gray-500">
+                      This link uses your real community route instead of seeded affiliate demo data.
+                    </p>
                   </div>
-                  <p className="text-right text-sm text-gray-400 mt-3">$0 available soon</p>
-                </div>
-              </div>
 
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-3">Your affiliate links</h2>
-                <div className="inline-flex rounded-full border border-gray-200 bg-white p-1">
-                  <button
-                    type="button"
-                    onClick={() => setAffiliateMode('platform')}
-                    className={`rounded-full px-4 py-1.5 text-sm font-semibold ${
-                      affiliateMode === 'platform' ? 'bg-gray-500 text-white' : 'text-gray-500'
-                    }`}
-                  >
-                    Skool platform
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAffiliateMode('community')}
-                    className={`rounded-full px-4 py-1.5 text-sm font-semibold ${
-                      affiliateMode === 'community' ? 'bg-gray-500 text-white' : 'text-gray-500'
-                    }`}
-                  >
-                    Editing Ninjas
-                  </button>
-                </div>
-              </div>
+                  <div>
+                    <div className="flex">
+                      <input
+                        readOnly
+                        value={affiliateUrl}
+                        className="flex-1 h-12 rounded-l-md border border-gray-300 px-3 text-primary-600 font-semibold"
+                      />
+                      <button
+                        type="button"
+                        onClick={copyAffiliateLink}
+                        className="h-12 px-10 rounded-r-md border border-[#eac76a] bg-[#f0c96b] font-bold text-gray-800 inline-flex items-center gap-2"
+                      >
+                        <Copy className="w-4 h-4" />
+                        COPY
+                      </button>
+                    </div>
+                  </div>
 
-              <p className="text-lg text-gray-800">
-                Earn <span className="font-bold">40% commission</span> when you invite somebody to create a Skool community.
-              </p>
-
-              <div>
-                <div className="flex">
-                  <input
-                    readOnly
-                    value={affiliateUrl}
-                    className="flex-1 h-12 rounded-l-md border border-gray-300 px-3 text-primary-600 font-semibold"
-                  />
-                  <button
-                    type="button"
-                    onClick={copyAffiliateLink}
-                    className="h-12 px-10 rounded-r-md border border-[#eac76a] bg-[#f0c96b] font-bold text-gray-800 inline-flex items-center gap-2"
-                  >
-                    <Copy className="w-4 h-4" />
-                    COPY
-                  </button>
+                  <div className="min-h-[220px] rounded-xl border border-gray-200 flex flex-col items-center justify-center text-center">
+                    <Coins className="w-12 h-12 text-yellow-500" />
+                    <p className="mt-4 text-lg text-gray-700">No referral records available.</p>
+                  </div>
+                </>
+              ) : (
+                <div className="min-h-[220px] rounded-xl border border-gray-200 flex flex-col items-center justify-center text-center">
+                  <Coins className="w-12 h-12 text-yellow-500" />
+                  <p className="mt-4 text-lg text-gray-700">Create a community to generate a share link.</p>
                 </div>
-                <div className="flex justify-end mt-3 text-sm text-gray-500">
-                  <button type="button" onClick={cycleAffiliateStatusFilter} className="inline-flex items-center gap-1">
-                    {affiliateStatusFilter}
-                    <ChevronDown className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="min-h-[260px] rounded-xl border border-gray-200 flex flex-col items-center justify-center text-center">
-                <Coins className="w-12 h-12 text-yellow-500" />
-                <p className="mt-4 text-lg text-gray-700">Your referrals will show here</p>
-              </div>
+              )}
             </Card>
           )}
 
@@ -930,6 +1019,11 @@ export function SettingsPage() {
                 </button>
               </div>
               <p className="mt-8 text-lg text-gray-500">No payouts yet</p>
+              <div className="mt-6 rounded-xl border border-gray-200 p-4 space-y-2">
+                <h2 className="text-lg font-semibold text-gray-900">Payout destination</h2>
+                <p className="text-sm text-gray-500">Method: {payoutSettings.method || 'Not set'}</p>
+                <p className="text-sm text-gray-500">Destination: {payoutSettings.destination || 'Not set'}</p>
+              </div>
             </Card>
           )}
 
@@ -945,9 +1039,10 @@ export function SettingsPage() {
                 <button
                   type="button"
                   onClick={handleChangeEmail}
-                  className="h-12 min-w-[180px] rounded-md border border-gray-300 text-gray-500 font-semibold"
+                  disabled={updateEmailMutation.isPending}
+                  className="h-12 min-w-[180px] rounded-md border border-gray-300 text-gray-500 font-semibold disabled:opacity-60"
                 >
-                  CHANGE EMAIL
+                  {updateEmailMutation.isPending ? 'UPDATING...' : 'CHANGE EMAIL'}
                 </button>
               </div>
 
@@ -959,18 +1054,25 @@ export function SettingsPage() {
                 <button
                   type="button"
                   onClick={handleChangePassword}
-                  className="h-12 min-w-[180px] rounded-md border border-gray-300 text-gray-500 font-semibold"
+                  disabled={updatePasswordMutation.isPending}
+                  className="h-12 min-w-[180px] rounded-md border border-gray-300 text-gray-500 font-semibold disabled:opacity-60"
                 >
-                  CHANGE PASSWORD
+                  {updatePasswordMutation.isPending ? 'UPDATING...' : 'CHANGE PASSWORD'}
                 </button>
               </div>
 
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-3">Timezone</h2>
-                <select className="w-full h-12 rounded-md border border-gray-300 px-3 text-lg text-gray-700 bg-white">
-                  <option>(GMT +01:00) Africa/Tunis</option>
-                  <option>(GMT +00:00) UTC</option>
-                  <option>(GMT +02:00) Europe/Berlin</option>
+                <select
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  className="w-full h-12 rounded-md border border-gray-300 px-3 text-lg text-gray-700 bg-white"
+                >
+                  {TIMEZONE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 

@@ -172,7 +172,7 @@ export function DiscoverPage() {
                     </div>
                   )}
                   <div className="absolute top-3 left-3">
-                    <Badge variant="default" className="bg-black/40 backdrop-blur-sm text-white border-0">
+                    <Badge variant="default" className="bg-gray-800 text-white border-0">
                       #{index + 1}
                     </Badge>
                   </div>
