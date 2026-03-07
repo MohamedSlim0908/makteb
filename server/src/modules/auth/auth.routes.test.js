@@ -2,9 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('./auth.service.js', () => ({
   registerUser: vi.fn(),
+  requestPasswordReset: vi.fn(),
   resolveRefreshToken: vi.fn(),
   getCurrentUser: vi.fn(),
   updateUserProfile: vi.fn(),
+  updateUserEmail: vi.fn(),
+  updateUserPassword: vi.fn(),
 }));
 
 vi.mock('../../middleware/auth.js', () => ({
@@ -131,6 +134,29 @@ describe('POST /login', () => {
   });
 });
 
+describe('POST /forgot-password', () => {
+  it('accepts a valid email and returns a generic success message', async () => {
+    authService.requestPasswordReset.mockResolvedValue({
+      message: 'If an account exists for that email, the password reset request has been received.',
+    });
+
+    const res = await request(buildApp())
+      .post('/forgot-password')
+      .send({ email: 'ali@makteb.tn' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/password reset request/i);
+  });
+
+  it('returns 400 for an invalid email payload', async () => {
+    const res = await request(buildApp())
+      .post('/forgot-password')
+      .send({ email: 'not-an-email' });
+
+    expect(res.status).toBe(400);
+  });
+});
+
 describe('POST /refresh', () => {
   it('returns new accessToken for a valid refresh cookie', async () => {
     authService.resolveRefreshToken.mockResolvedValue(MOCK_USER);
@@ -210,6 +236,32 @@ describe('PUT /me', () => {
     expect(res.status).toBe(200);
     expect(res.body.user.name).toBe('Ali Updated');
     expect(res.body.user.bio).toBe('Coach');
+  });
+});
+
+describe('PUT /email', () => {
+  it('updates and returns the current user email', async () => {
+    authService.updateUserEmail.mockResolvedValue({ ...MOCK_USER, email: 'new@makteb.tn' });
+
+    const res = await request(buildApp())
+      .put('/email')
+      .send({ email: 'new@makteb.tn', currentPassword: 'secret123' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.email).toBe('new@makteb.tn');
+  });
+});
+
+describe('PUT /password', () => {
+  it('updates the current user password', async () => {
+    authService.updateUserPassword.mockResolvedValue(undefined);
+
+    const res = await request(buildApp())
+      .put('/password')
+      .send({ currentPassword: 'secret123', newPassword: 'newpassword123' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Password updated');
   });
 });
 

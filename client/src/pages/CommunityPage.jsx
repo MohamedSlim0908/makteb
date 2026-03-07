@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  useInfiniteQuery,
+  keepPreviousData,
   useMutation,
   useQuery,
   useQueryClient,
@@ -32,6 +32,9 @@ import { PostComposer } from '../components/course-community/PostComposer';
 import { Leaderboard } from '../components/course-community/Leaderboard';
 import { MembersList } from '../components/course-community/MembersList';
 import { CalendarMonthView } from '../components/course-community/CalendarMonthView';
+import { POST_CATEGORIES } from '../components/course-community/mockData';
+import { PaginationNavigation } from '../components/ui/PaginationNavigation';
+import { isRichTextEmpty } from '../lib/richText';
 
 const PAGE_SIZE = 10;
 
@@ -44,13 +47,6 @@ const TABS = [
   { id: 'about', label: 'About' },
 ];
 const PUBLIC_TAB_IDS = new Set(['about']);
-
-const CATEGORY_OPTIONS = [
-  { value: 'ALL', label: 'All' },
-  { value: 'GENERAL', label: 'General' },
-  { value: 'WINS', label: 'Newsletter' },
-  { value: 'WORKFLOW_PRODUCTIVITY', label: 'Resources' },
-];
 
 function getAvailableTabs(isMember) {
   if (isMember) return TABS;
@@ -72,10 +68,11 @@ export function CommunityPage() {
   const queryClient = useQueryClient();
 
   const [activeCategory, setActiveCategory] = useState('ALL');
+  const [page, setPage] = useState(1);
   const [postTitle, setPostTitle] = useState('');
   const [postContent, setPostContent] = useState('');
-  const [postCategory, setPostCategory] = useState('GENERAL');
-  const observerRef = useRef(null);
+  const [postCategory, setPostCategory] = useState('');
+  const feedTopRef = useRef(null);
   const requestedTab = searchParams.get('tab');
 
   // Fetch community
@@ -120,34 +117,23 @@ export function CommunityPage() {
     enabled: !!communityId && isMember,
   });
 
-  // Posts (infinite)
-  const {
-    data: postsData,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading: postsLoading,
-  } = useInfiniteQuery({
-    queryKey: ['community-posts', communityId, activeCategory],
-    queryFn: async ({ pageParam = 1 }) => {
+  const { data: postsData, isLoading: postsLoading, isFetching: postsFetching } = useQuery({
+    queryKey: ['community-posts', communityId, activeCategory, page],
+    queryFn: async () => {
       const params = new URLSearchParams();
-      params.set('page', String(pageParam));
+      params.set('page', String(page));
       params.set('limit', String(PAGE_SIZE));
       if (activeCategory !== 'ALL') params.set('category', activeCategory);
       const { data } = await api.get(`/posts/community/${communityId}?${params}`);
       return data;
     },
-    getNextPageParam: (lastPage, allPages) => {
-      const loaded = allPages.reduce((acc, p) => acc + (p.posts?.length || 0), 0);
-      return loaded < (lastPage.total || 0) ? allPages.length + 1 : undefined;
-    },
     enabled: !!communityId && isMember && activeTab === 'community',
+    placeholderData: keepPreviousData,
   });
 
-  const posts = useMemo(
-    () => postsData?.pages.flatMap((p) => p.posts || []) ?? [],
-    [postsData]
-  );
+  const posts = postsData?.posts ?? [];
+  const totalPages = postsData?.totalPages ?? 0;
+  const isPageTransitioning = postsFetching && !postsLoading;
 
   // Leaderboard
   const { data: leaderboard, isLoading: leaderboardLoading } = useQuery({
@@ -192,18 +178,6 @@ export function CommunityPage() {
     .map((part) => part.trim())
     .filter(Boolean);
 
-  // Infinite scroll observer
-  useEffect(() => {
-    if (!hasNextPage || isFetchingNextPage) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) fetchNextPage(); },
-      { threshold: 0.5 }
-    );
-    const el = observerRef.current;
-    if (el) observer.observe(el);
-    return () => { if (el) observer.unobserve(el); };
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-
   useEffect(() => {
     if (isResolvingAccess) return;
     if (requestedTab !== activeTab) {
@@ -237,10 +211,12 @@ export function CommunityPage() {
   const createPostMutation = useMutation({
     mutationFn: (payload) => api.post('/posts', payload),
     onSuccess: () => {
+      setPage(1);
       queryClient.invalidateQueries({ queryKey: ['community-posts', communityId] });
       setPostTitle('');
       setPostContent('');
-      setPostCategory('GENERAL');
+      setPostCategory('');
+      feedTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       toast.success('Post created!');
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to create post'),
@@ -261,17 +237,28 @@ export function CommunityPage() {
     setSearchParams(next);
   }
 
-  function handleCreatePost(e) {
-    e.preventDefault();
+  function handleCreatePost() {
     if (!isMember) { toast.error('Join the community to post.'); return; }
-    if (!postTitle.trim() || !postContent.trim()) return;
+    if (!postTitle.trim() || isRichTextEmpty(postContent)) return;
     createPostMutation.mutate({
       communityId,
       title: postTitle.trim(),
-      content: postContent.trim(),
+      content: postContent,
       type: 'DISCUSSION',
-      category: postCategory,
+      category: postCategory || undefined,
     });
+  }
+
+  function handleCategoryChange(nextCategory) {
+    setActiveCategory(nextCategory);
+    setPage(1);
+    feedTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function handlePageChange(nextPage) {
+    if (nextPage < 1 || nextPage > totalPages || nextPage === page) return;
+    setPage(nextPage);
+    feedTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function handleLike(postId) {
@@ -358,6 +345,7 @@ export function CommunityPage() {
               <div className="lg:pr-[384px]">
                 <PostComposer
                   user={user}
+                  contextName={community.name}
                   title={postTitle}
                   content={postContent}
                   category={postCategory}
@@ -372,12 +360,14 @@ export function CommunityPage() {
 
             <div className="communityGrid">
               <div className="space-y-4 min-w-0">
+                <div ref={feedTopRef} className="scroll-mt-24" />
+
                 {/* Category Filters */}
                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-                  {CATEGORY_OPTIONS.map((cat) => (
+                  {POST_CATEGORIES.map((cat) => (
                     <button
                       key={cat.value}
-                      onClick={() => setActiveCategory(cat.value)}
+                      onClick={() => handleCategoryChange(cat.value)}
                       className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
                         activeCategory === cat.value
                           ? 'bg-gray-900 text-white'
@@ -388,6 +378,13 @@ export function CommunityPage() {
                     </button>
                   ))}
                 </div>
+
+                {isPageTransitioning && (
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
+                    <span>Loading posts...</span>
+                  </div>
+                )}
 
                 {/* Posts */}
                 {postsLoading ? (
@@ -402,14 +399,16 @@ export function CommunityPage() {
                         post={post}
                         onToggleLike={handleLike}
                         likePending={likeMutation.isPending}
+                        currentUserId={user?.id}
+                        memberRole={memberRole}
                       />
                     ))}
-                    <div ref={observerRef} className="h-4" />
-                    {isFetchingNextPage && (
-                      <div className="flex justify-center py-4">
-                        <div className="animate-spin w-6 h-6 border-2 border-primary-600 border-t-transparent rounded-full" />
-                      </div>
-                    )}
+
+                    <PaginationNavigation
+                      page={page}
+                      totalPages={totalPages}
+                      onPageChange={handlePageChange}
+                    />
                   </div>
                 ) : (
                   <Card>

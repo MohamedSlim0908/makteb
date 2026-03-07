@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useLocation, useMatch } from 'react-router-dom';
+import { Link, useLocation, useMatch, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Bell,
-  BookOpen,
-  ChevronDown,
+  ChevronsUpDown,
   Compass,
   Globe,
   Menu,
@@ -14,15 +13,18 @@ import {
   Settings,
   X,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
 import { useAuth } from '../../hooks/useAuth';
+import { useNotificationSocket } from '../../hooks/useNotificationSocket';
 import { api } from '../../lib/api';
-import { Avatar } from '../ui/Avatar';
+import { useUnreadCount } from '../../features/notifications/useUnreadCount';
 import { NotificationPanel } from './NotificationPanel';
+import { Avatar } from '../ui/Avatar';
 
 export function Navbar() {
   const { user, logout } = useAuth();
   const { pathname, search } = useLocation();
+  const navigate = useNavigate();
+  const navbarContainerClass = 'mx-auto w-full px-4 sm:px-5 lg:px-6';
 
   const courseMatch1 = useMatch('/course/:id');
   const courseMatch2 = useMatch('/course/:id/*');
@@ -41,13 +43,17 @@ export function Navbar() {
   const [isBrandMenuOpen, setIsBrandMenuOpen] = useState(false);
   const [brandMenuSearch, setBrandMenuSearch] = useState('');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [shellSearch, setShellSearch] = useState('');
 
   const brandMenuRef = useRef(null);
   const userMenuRef = useRef(null);
-  const notifRef = useRef(null);
+  const notificationPanelRef = useRef(null);
+
+  useNotificationSocket(user?.id);
+
+  const { data: unreadCount = 0 } = useUnreadCount(Boolean(user));
 
   const { data: courseBrand } = useQuery({
     queryKey: ['navbar-course-brand', courseId],
@@ -101,8 +107,8 @@ export function Navbar() {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
         setIsUserMenuOpen(false);
       }
-      if (notifRef.current && !notifRef.current.contains(e.target)) {
-        setIsNotifOpen(false);
+      if (notificationPanelRef.current && !notificationPanelRef.current.contains(e.target)) {
+        setIsNotificationPanelOpen(false);
       }
     }
     function handleEscape(e) {
@@ -110,7 +116,7 @@ export function Navbar() {
         setIsBrandMenuOpen(false);
         setBrandMenuSearch('');
         setIsUserMenuOpen(false);
-        setIsNotifOpen(false);
+        setIsNotificationPanelOpen(false);
         setIsMobileMenuOpen(false);
       }
     }
@@ -123,13 +129,14 @@ export function Navbar() {
   }, []);
 
   // Close menus on navigation using key-based reset
-  const [menuKey, setMenuKey] = useState(pathname);
-  if (menuKey !== pathname) {
-    setMenuKey(pathname);
+  const navigationKey = `${pathname}${search}`;
+  const [menuKey, setMenuKey] = useState(navigationKey);
+  if (menuKey !== navigationKey) {
+    setMenuKey(navigationKey);
     setIsBrandMenuOpen(false);
     setBrandMenuSearch('');
     setIsUserMenuOpen(false);
-    setIsNotifOpen(false);
+    setIsNotificationPanelOpen(false);
     setIsMobileMenuOpen(false);
   }
 
@@ -146,9 +153,11 @@ export function Navbar() {
 
   const enrolledCourseLinks = (enrolledCourses ?? []).map((course) => ({
     id: course.id,
-    to: `/course/${course.id}`,
+    to: course.community?.slug ? `/community/${course.community.slug}` : `/course/${course.id}`,
+    activePath: course.community?.slug ? `/community/${course.community.slug}` : `/course/${course.id}`,
     label: course.title,
     subtitle: course.community?.name || 'Course',
+    image: course.coverImage || course.community?.coverImage || null,
   }));
   const filteredEnrolledCourseLinks = enrolledCourseLinks.filter((course) =>
     `${course.label} ${course.subtitle}`.toLowerCase().includes(normalizedMenuSearch)
@@ -186,11 +195,23 @@ export function Navbar() {
     ? requestedCommunityTab
     : defaultCommunityTab;
 
+  function handleMessagesClick() {
+    navigate('/settings?section=chat');
+  }
+
+  function toggleNotificationsPanel() {
+    setIsNotificationPanelOpen((open) => !open);
+    setIsUserMenuOpen(false);
+    setIsBrandMenuOpen(false);
+    setBrandMenuSearch('');
+    setIsMobileMenuOpen(false);
+  }
+
   function renderUserDropdown() {
     if (!user || !isUserMenuOpen) return null;
 
     return (
-      <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-dropdown border border-gray-200 py-1 animate-scale-in z-50">
+      <div className="absolute right-0 top-full mt-2 w-64 max-w-[calc(100vw-1rem)] rounded-xl border border-gray-200 bg-white py-1 shadow-dropdown z-50 animate-scale-in">
         <div className="px-4 py-3 border-b border-gray-100">
           <p className="font-medium text-gray-900 truncate text-sm">{user.email}</p>
         </div>
@@ -214,10 +235,7 @@ export function Navbar() {
           disabled
           className="block w-full text-left px-4 py-2.5 text-sm text-gray-400 cursor-not-allowed"
         >
-          <span className="flex items-center justify-between w-full">
-            Affiliates
-            <span className="text-[10px] text-gray-300">Coming soon</span>
-          </span>
+          Affiliates
         </button>
 
         <div className="my-1 border-t border-gray-100" />
@@ -227,10 +245,7 @@ export function Navbar() {
           disabled
           className="block w-full text-left px-4 py-2.5 text-sm text-gray-400 cursor-not-allowed"
         >
-          <span className="flex items-center justify-between w-full">
-            Help center
-            <span className="text-[10px] text-gray-300">Coming soon</span>
-          </span>
+          Help center
         </button>
         <Link
           to="/dashboard"
@@ -259,13 +274,50 @@ export function Navbar() {
     );
   }
 
+  function renderEnrolledCourseMenuItems() {
+    if (enrolledCoursesLoading) {
+      return <div className="px-2 py-2 text-sm text-gray-400">Loading...</div>;
+    }
+
+    if (filteredEnrolledCourseLinks.length === 0) {
+      return null;
+    }
+
+    return filteredEnrolledCourseLinks.map((course) => (
+      <Link
+        key={course.id}
+        to={course.to}
+        onClick={() => { setIsBrandMenuOpen(false); setBrandMenuSearch(''); }}
+        className={`flex items-start gap-3 rounded-lg px-2 py-2 text-sm text-gray-700 transition-colors ${
+          pathname.startsWith(course.activePath) ? 'bg-gray-50' : 'hover:bg-gray-50'
+        }`}
+      >
+        {course.image ? (
+          <img
+            src={course.image}
+            alt=""
+            className="h-8 w-8 shrink-0 rounded-lg object-cover"
+          />
+        ) : (
+          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xs font-semibold text-gray-600">
+            {(course.label || 'C').charAt(0)}
+          </span>
+        )}
+        <span className="min-w-0">
+          <span className="block truncate font-medium">{course.label}</span>
+          <span className="block truncate text-xs text-gray-400">{course.subtitle}</span>
+        </span>
+      </Link>
+    ));
+  }
+
   // Community/Course shell navbar
   if (isCommunityShellRoute) {
     const communityTabBase = communitySlug ? `/community/${communitySlug}` : '/discover';
 
     return (
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="appContainer h-12 flex items-center gap-4">
+        <div className={`${navbarContainerClass} flex h-12 items-center gap-4`}>
           <div className="flex items-center gap-2 min-w-0 shrink-0">
             <Link to={communityShellHome} className="flex items-center gap-2">
               <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
@@ -273,19 +325,22 @@ export function Navbar() {
               </div>
             </Link>
 
-            <div ref={brandMenuRef} className="relative hidden md:block">
+            <div ref={brandMenuRef} className="relative hidden md:flex items-center gap-1.5 min-w-0">
+              <span className="font-semibold text-sm text-gray-900 truncate max-w-[220px]">
+                {brandName}
+              </span>
               <button
                 type="button"
                 onClick={() => setIsBrandMenuOpen((open) => !open)}
                 aria-expanded={isBrandMenuOpen}
-                className="flex items-center gap-1 text-gray-900 hover:text-primary-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-md px-1.5 py-1"
+                aria-label="Toggle navigation menu"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center text-gray-500 hover:text-primary-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-md"
               >
-                <span className="font-semibold text-sm truncate max-w-[220px]">{brandName}</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isBrandMenuOpen ? 'rotate-180' : ''}`} />
+                <ChevronsUpDown className={`w-3.5 h-3.5 transition-transform ${isBrandMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {isBrandMenuOpen && (
-                <div className="absolute left-0 mt-2 w-72 bg-white rounded-xl shadow-dropdown border border-gray-200 p-2 z-50 animate-scale-in">
+                <div className="absolute left-0 top-full mt-2 w-72 max-w-[calc(100vw-1rem)] rounded-xl border border-gray-200 bg-white p-2 shadow-dropdown z-50 animate-scale-in">
                   <div className="px-1 pb-2">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -316,38 +371,10 @@ export function Navbar() {
                     );
                   })}
 
-                  {user && (
+                  {user && (enrolledCoursesLoading || filteredEnrolledCourseLinks.length > 0) && (
                     <div className="px-1 pt-1">
                       <div className="my-1 border-t border-gray-100" />
-                      <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-                        Enrolled courses
-                      </p>
-                      {enrolledCoursesLoading ? (
-                        <div className="px-2 py-2 text-sm text-gray-400">Loading...</div>
-                      ) : filteredEnrolledCourseLinks.length === 0 ? (
-                        <div className="px-2 py-2 text-sm text-gray-400">
-                          {normalizedMenuSearch ? 'No courses found.' : 'No enrolled courses yet.'}
-                        </div>
-                      ) : (
-                        filteredEnrolledCourseLinks.map((course) => (
-                          <Link
-                            key={course.id}
-                            to={course.to}
-                            onClick={() => { setIsBrandMenuOpen(false); setBrandMenuSearch(''); }}
-                            className={`flex items-start gap-3 rounded-lg px-2 py-2 text-sm text-gray-700 transition-colors ${
-                              pathname.startsWith(`/course/${course.id}`) ? 'bg-gray-50' : 'hover:bg-gray-50'
-                            }`}
-                          >
-                            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
-                              <BookOpen className="w-4 h-4" />
-                            </span>
-                            <span className="min-w-0">
-                              <span className="block truncate font-medium">{course.label}</span>
-                              <span className="block truncate text-xs text-gray-400">{course.subtitle}</span>
-                            </span>
-                          </Link>
-                        ))
-                      )}
+                      {renderEnrolledCourseMenuItems()}
                     </div>
                   )}
                 </div>
@@ -374,20 +401,27 @@ export function Navbar() {
             {user ? (
               <>
                 <button
-                  onClick={() => toast('Messages coming soon!', { icon: '💬' })}
+                  type="button"
+                  onClick={handleMessagesClick}
+                  aria-label="Open messages"
                   className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
                 >
                   <MessageCircle className="w-[18px] h-[18px]" />
                 </button>
-                <div ref={notifRef} className="relative">
+                <div ref={notificationPanelRef} className="relative">
                   <button
-                    onClick={() => { setIsNotifOpen(!isNotifOpen); setIsUserMenuOpen(false); }}
+                    type="button"
+                    onClick={toggleNotificationsPanel}
+                    aria-label="Open notifications"
+                    aria-expanded={isNotificationPanelOpen}
                     className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors relative"
                   >
                     <Bell className="w-[18px] h-[18px]" />
-                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+                    {unreadCount > 0 && (
+                      <span className="absolute top-1 right-1 min-w-2 h-2 rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white" />
+                    )}
                   </button>
-                  {isNotifOpen && <NotificationPanel onClose={() => setIsNotifOpen(false)} />}
+                  {isNotificationPanelOpen && <NotificationPanel onClose={() => setIsNotificationPanelOpen(false)} />}
                 </div>
                 <div ref={userMenuRef} className="relative ml-1">
                   <button
@@ -411,8 +445,8 @@ export function Navbar() {
         </div>
 
         {isCommunityRoute && (
-          <div className="border-t border-gray-100">
-            <div className="appContainer">
+          <div>
+            <div className={navbarContainerClass}>
               <div className="flex items-center gap-4 overflow-x-auto no-scrollbar">
                 {availableCommunityTabs.map((tab) => (
                   <Link
@@ -440,7 +474,7 @@ export function Navbar() {
     <nav className={`sticky top-0 z-50 h-14 border-b transition-colors ${
       isLanding ? 'bg-white/80 backdrop-blur-lg border-gray-200/60' : 'bg-white border-gray-200'
     }`}>
-      <div className="appContainer h-full flex items-center justify-between gap-4">
+      <div className={`${navbarContainerClass} flex h-full items-center justify-between gap-4`}>
         {/* Left */}
         <div className="flex items-center gap-3 min-w-fit">
           <Link to="/" className="flex items-center gap-2">
@@ -449,19 +483,20 @@ export function Navbar() {
             </div>
           </Link>
 
-          <div ref={brandMenuRef} className="relative hidden md:block">
+          <div ref={brandMenuRef} className="relative hidden md:flex items-center gap-1.5">
+            <span className="font-semibold text-sm text-gray-900">{brandName}</span>
             <button
               type="button"
               onClick={() => setIsBrandMenuOpen((open) => !open)}
               aria-expanded={isBrandMenuOpen}
-              className="flex items-center gap-1 text-gray-900 hover:text-primary-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-md px-1.5 py-1"
+              aria-label="Toggle navigation menu"
+              className="inline-flex h-8 w-8 items-center justify-center text-gray-500 hover:text-primary-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-md"
             >
-              <span className="font-semibold text-sm">{brandName}</span>
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isBrandMenuOpen ? 'rotate-180' : ''}`} />
+              <ChevronsUpDown className={`w-3.5 h-3.5 transition-transform ${isBrandMenuOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {isBrandMenuOpen && (
-              <div className="absolute left-0 mt-2 w-72 bg-white rounded-xl shadow-dropdown border border-gray-200 p-2 z-50 animate-scale-in">
+              <div className="absolute left-0 top-full mt-2 w-72 max-w-[calc(100vw-1rem)] rounded-xl border border-gray-200 bg-white p-2 shadow-dropdown z-50 animate-scale-in">
                 <div className="px-1 pb-2">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -492,38 +527,10 @@ export function Navbar() {
                   );
                 })}
 
-                {user && (
+                {user && (enrolledCoursesLoading || filteredEnrolledCourseLinks.length > 0) && (
                   <div className="px-1 pt-1">
                     <div className="my-1 border-t border-gray-100" />
-                    <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-                      Enrolled courses
-                    </p>
-                    {enrolledCoursesLoading ? (
-                      <div className="px-2 py-2 text-sm text-gray-400">Loading...</div>
-                    ) : filteredEnrolledCourseLinks.length === 0 ? (
-                      <div className="px-2 py-2 text-sm text-gray-400">
-                        {normalizedMenuSearch ? 'No courses found.' : 'No enrolled courses yet.'}
-                      </div>
-                    ) : (
-                      filteredEnrolledCourseLinks.map((course) => (
-                        <Link
-                          key={course.id}
-                          to={course.to}
-                          onClick={() => { setIsBrandMenuOpen(false); setBrandMenuSearch(''); }}
-                          className={`flex items-start gap-3 rounded-lg px-2 py-2 text-sm text-gray-700 transition-colors ${
-                            pathname.startsWith(`/course/${course.id}`) ? 'bg-gray-50' : 'hover:bg-gray-50'
-                          }`}
-                        >
-                          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
-                            <BookOpen className="w-4 h-4" />
-                          </span>
-                          <span className="min-w-0">
-                            <span className="block truncate font-medium">{course.label}</span>
-                            <span className="block truncate text-xs text-gray-400">{course.subtitle}</span>
-                          </span>
-                        </Link>
-                      ))
-                    )}
+                    {renderEnrolledCourseMenuItems()}
                   </div>
                 )}
               </div>
@@ -535,31 +542,30 @@ export function Navbar() {
         <div className="flex items-center gap-1.5">
           {user ? (
             <>
-              <Link
-                to="/discover"
-                className={`hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-                  pathname === '/discover' ? 'text-primary-600 bg-primary-50' : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <Compass className="w-4 h-4" />
-                Discover
-              </Link>
-
               <button
-                onClick={() => toast('Messages coming soon!', { icon: '💬' })}
+                type="button"
+                onClick={handleMessagesClick}
+                aria-label="Open messages"
                 className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
               >
                 <MessageCircle className="w-[18px] h-[18px]" />
               </button>
-              <div ref={notifRef} className="relative">
+              <div ref={notificationPanelRef} className="relative">
                 <button
-                  onClick={() => { setIsNotifOpen(!isNotifOpen); setIsUserMenuOpen(false); }}
+                  type="button"
+                  onClick={toggleNotificationsPanel}
+                  aria-label="Open notifications"
+                  aria-expanded={isNotificationPanelOpen}
                   className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors relative"
                 >
                   <Bell className="w-[18px] h-[18px]" />
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
                 </button>
-                {isNotifOpen && <NotificationPanel onClose={() => setIsNotifOpen(false)} />}
+                {isNotificationPanelOpen && <NotificationPanel onClose={() => setIsNotificationPanelOpen(false)} />}
               </div>
 
               <div ref={userMenuRef} className="relative ml-1">
@@ -581,20 +587,12 @@ export function Navbar() {
               </button>
             </>
           ) : (
-            <div className="flex items-center gap-2">
-              <Link
-                to="/login"
-                className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
-              >
-                Log in
-              </Link>
-              <Link
-                to="/register"
-                className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-black rounded-lg transition-colors"
-              >
-                Sign up
-              </Link>
-            </div>
+            <Link
+              to="/login"
+              className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+            >
+              Log in
+            </Link>
           )}
         </div>
       </div>

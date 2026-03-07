@@ -41,7 +41,7 @@ export function NotificationPanel({ onClose }) {
   };
 
   return (
-    <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-dropdown border border-gray-200 z-50 animate-scale-in overflow-hidden">
+    <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-1rem)] sm:w-96 bg-white rounded-xl shadow-dropdown border border-gray-200 z-50 animate-scale-in overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
         <h3 className="font-semibold text-sm text-gray-900">Notifications</h3>
         {notifications.length > 0 && (

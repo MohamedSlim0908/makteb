@@ -10,9 +10,15 @@ import { AdminRoute } from './components/layout/AdminRoute';
 const LandingPage = lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('./pages/RegisterPage').then(m => ({ default: m.RegisterPage })));
+const ForgotPasswordPage = lazy(() =>
+  import('./pages/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage }))
+);
 const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage').then(m => ({ default: m.AuthCallbackPage })));
 const DiscoverPage = lazy(() => import('./pages/DiscoverPage').then(m => ({ default: m.DiscoverPage })));
 const CommunityPage = lazy(() => import('./pages/CommunityPage').then(m => ({ default: m.CommunityPage })));
+const CommunitySettingsPage = lazy(() =>
+  import('./pages/CommunitySettingsPage').then(m => ({ default: m.CommunitySettingsPage }))
+);
 const PostPage = lazy(() => import('./pages/PostPage').then(m => ({ default: m.PostPage })));
 const CoursePage = lazy(() => import('./pages/CoursePage').then(m => ({ default: m.CoursePage })));
 const CourseLearnPage = lazy(() => import('./pages/CourseLearnPage').then(m => ({ default: m.CourseLearnPage })));
@@ -23,7 +29,6 @@ const CreatorPricingPage = lazy(() => import('./pages/CreatorPricingPage').then(
 const CreatorCommunityDashboardPage = lazy(() =>
   import('./pages/CreatorCommunityDashboardPage').then(m => ({ default: m.CreatorCommunityDashboardPage }))
 );
-const CommunitySettingsPage = lazy(() => import('./pages/CommunitySettingsPage').then(m => ({ default: m.CommunitySettingsPage })));
 const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
 const SearchPage = lazy(() => import('./pages/SearchPage').then(m => ({ default: m.SearchPage })));
 const PaymentCallbackPage = lazy(() => import('./pages/PaymentCallbackPage').then(m => ({ default: m.PaymentCallbackPage })));
@@ -60,6 +65,7 @@ export default function App() {
               </Route>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/auth/callback" element={<AuthCallbackPage />} />
               <Route path="/payment/callback" element={<PaymentCallbackPage />} />
               <Route path="/creator" element={<CreatorLandingPage />} />

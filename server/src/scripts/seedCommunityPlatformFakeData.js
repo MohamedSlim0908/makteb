@@ -91,6 +91,7 @@ const COMMUNITIES = [
     slug: 'creator-academy',
     description: 'A community for creators who want to build, launch, and grow online businesses. We share strategies, tools, and honest feedback. Weekly live Q&A sessions and a structured course to help you go from 0 to your first $10k.',
     coverImage: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1600&q=80',
+    category: 'money',
     visibility: 'PUBLIC',
   },
   {
@@ -98,6 +99,7 @@ const COMMUNITIES = [
     slug: 'design-collective',
     description: 'For designers who want to level up their craft. Portfolio reviews, design challenges, and mentorship from senior designers at top companies.',
     coverImage: 'https://images.unsplash.com/photo-1558655146-9f40138edfeb?auto=format&fit=crop&w=1600&q=80',
+    category: 'hobbies',
     visibility: 'PUBLIC',
   },
   {
@@ -105,6 +107,7 @@ const COMMUNITIES = [
     slug: 'code-and-coffee',
     description: 'Learn to code in a supportive environment. From beginners to seniors, we help each other grow. Daily coding challenges and pair programming sessions.',
     coverImage: 'https://images.unsplash.com/photo-1517180102446-f3ece451e9d8?auto=format&fit=crop&w=1600&q=80',
+    category: 'tech',
     visibility: 'PUBLIC',
   },
   {
@@ -112,6 +115,7 @@ const COMMUNITIES = [
     slug: 'startup-lab',
     description: 'Building a startup? Join founders sharing real numbers, strategies, and lessons learned. No fluff, just real talk about building products people want.',
     coverImage: 'https://images.unsplash.com/photo-1553028826-f4804a6dba3b?auto=format&fit=crop&w=1600&q=80',
+    category: 'money',
     visibility: 'PUBLIC',
   },
   {
@@ -119,6 +123,7 @@ const COMMUNITIES = [
     slug: 'mindful-living',
     description: 'A space for personal growth, meditation, and intentional living. Weekly guided sessions and a supportive community.',
     coverImage: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1600&q=80',
+    category: 'spirituality',
     visibility: 'PUBLIC',
   },
   {
@@ -126,6 +131,7 @@ const COMMUNITIES = [
     slug: 'photography-masters',
     description: 'Take better photos. Learn composition, lighting, and editing from professional photographers. Monthly photo challenges.',
     coverImage: 'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?auto=format&fit=crop&w=1600&q=80',
+    category: 'hobbies',
     visibility: 'PUBLIC',
   },
 ];
@@ -192,6 +198,207 @@ const COURSES = [
       },
     ],
   },
+];
+
+const DEFAULT_VIDEO_URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+
+const EXTRA_COURSE_BLUEPRINTS = [
+  {
+    title: 'YouTube Launch Sprint',
+    description: 'Build a repeatable publishing cadence, sharpen your topic strategy, and turn your first videos into a growth engine.',
+    coverImage: 'https://images.unsplash.com/photo-1492619375914-88005aa9e8fb?auto=format&fit=crop&w=1600&q=80',
+    communityIndex: 0,
+    order: 1,
+    price: 29,
+    moduleTitles: ['Channel Positioning', 'Video Planning System', 'Retention & Offers'],
+  },
+  {
+    title: 'Newsletter Growth Systems',
+    description: 'Create a newsletter readers open, trust, and buy from using simple systems for ideation, writing, and conversion.',
+    coverImage: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=80',
+    communityIndex: 0,
+    order: 2,
+    price: 19,
+    moduleTitles: ['Audience Promise', 'Weekly Editorial Workflow', 'Subscriber Monetization'],
+  },
+  {
+    title: 'Digital Products Lab',
+    description: 'Validate an offer, package it quickly, and launch digital products without weeks of overbuilding.',
+    coverImage: 'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=1600&q=80',
+    communityIndex: 0,
+    order: 3,
+    price: 39,
+    moduleTitles: ['Offer Selection', 'Fast Product Creation', 'Launch Review Loop'],
+  },
+  {
+    title: 'Portfolio Storytelling',
+    description: 'Turn static case studies into a narrative that sells your thinking, process, and outcomes.',
+    coverImage: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1600&q=80',
+    communityIndex: 1,
+    order: 1,
+    price: 24,
+    moduleTitles: ['Case Study Framing', 'Visual Proof', 'Portfolio Conversion'],
+  },
+  {
+    title: 'Brand Identity Deep Dive',
+    description: 'Learn how to build cohesive visual systems that hold together across logos, typography, motion, and collateral.',
+    coverImage: 'https://images.unsplash.com/photo-1522542550221-31fd19575a2d?auto=format&fit=crop&w=1600&q=80',
+    communityIndex: 1,
+    order: 2,
+    price: 34,
+    moduleTitles: ['Brand Strategy Inputs', 'Identity Components', 'System Rollout'],
+  },
+  {
+    title: 'Figma Systems Workshop',
+    description: 'Structure files, components, and design tokens so your team can move fast without losing consistency.',
+    coverImage: 'https://images.unsplash.com/photo-1559028012-481c04fa702d?auto=format&fit=crop&w=1600&q=80',
+    communityIndex: 1,
+    order: 3,
+    price: 21,
+    moduleTitles: ['File Architecture', 'Component Patterns', 'Handoff & QA'],
+  },
+  {
+    title: 'JavaScript Foundations',
+    description: 'A practical path through the core language concepts you need before frameworks start to make sense.',
+    coverImage: 'https://images.unsplash.com/photo-1515876305429-8a6653c0d5d3?auto=format&fit=crop&w=1600&q=80',
+    communityIndex: 2,
+    order: 1,
+    price: 0,
+    moduleTitles: ['Language Basics', 'Functions & State', 'Debugging Practice'],
+  },
+  {
+    title: 'React Project Studio',
+    description: 'Ship a complete React app with routing, state, data fetching, and real implementation decisions.',
+    coverImage: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&w=1600&q=80',
+    communityIndex: 2,
+    order: 2,
+    price: 35,
+    moduleTitles: ['Project Setup', 'Component Architecture', 'Data & Deployment'],
+  },
+  {
+    title: 'Backend API Essentials',
+    description: 'Design, build, and secure APIs with a clear focus on contracts, auth, persistence, and testing.',
+    coverImage: 'https://images.unsplash.com/photo-1555949963-aa79dcee981c?auto=format&fit=crop&w=1600&q=80',
+    communityIndex: 2,
+    order: 3,
+    price: 32,
+    moduleTitles: ['Routing & Validation', 'Persistence Layer', 'Testing & Reliability'],
+  },
+  {
+    title: 'Customer Discovery Sprint',
+    description: 'Run sharper founder interviews, collect real signals, and turn insights into roadmap decisions.',
+    coverImage: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80',
+    communityIndex: 3,
+    order: 1,
+    price: 27,
+    moduleTitles: ['Interview Design', 'Pattern Extraction', 'Offer Direction'],
+  },
+  {
+    title: 'SaaS Metrics Playbook',
+    description: 'Make sense of retention, activation, churn, and growth metrics without drowning in dashboards.',
+    coverImage: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1600&q=80',
+    communityIndex: 3,
+    order: 2,
+    price: 31,
+    moduleTitles: ['Core Metrics', 'Reporting Cadence', 'Decision Triggers'],
+  },
+  {
+    title: 'No-Code MVP Builder',
+    description: 'Go from concept to testable MVP with a practical stack and launch plan for early traction.',
+    coverImage: 'https://images.unsplash.com/photo-1516321165247-4aa89a48be28?auto=format&fit=crop&w=1600&q=80',
+    communityIndex: 3,
+    order: 3,
+    price: 18,
+    moduleTitles: ['MVP Scope', 'Tool Stack', 'Feedback to Iteration'],
+  },
+  {
+    title: 'Meditation Habit Builder',
+    description: 'Build a consistent meditation practice with prompts, routines, and accountability that actually stick.',
+    coverImage: 'https://images.unsplash.com/photo-1508672019048-805c876b67e2?auto=format&fit=crop&w=1600&q=80',
+    communityIndex: 4,
+    order: 1,
+    price: 0,
+    moduleTitles: ['Daily Ritual Setup', 'Attention Training', 'Reflection & Consistency'],
+  },
+  {
+    title: 'Intentional Journaling',
+    description: 'Use journaling frameworks to clarify priorities, regulate stress, and notice your growth in real time.',
+    coverImage: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=1600&q=80',
+    communityIndex: 4,
+    order: 2,
+    price: 14,
+    moduleTitles: ['Prompt Systems', 'Pattern Review', 'Decision Clarity'],
+  },
+  {
+    title: 'Energy & Focus Reset',
+    description: 'Reduce mental clutter and structure your days around recovery, focus windows, and realistic routines.',
+    coverImage: 'https://images.unsplash.com/photo-1499209974431-9dddcece7f88?auto=format&fit=crop&w=1600&q=80',
+    communityIndex: 4,
+    order: 3,
+    price: 17,
+    moduleTitles: ['Energy Audit', 'Focus Rituals', 'Sustainable Planning'],
+  },
+  {
+    title: 'Portrait Lighting Lab',
+    description: 'Understand natural and artificial light so your portraits feel controlled, flattering, and intentional.',
+    coverImage: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1600&q=80',
+    communityIndex: 5,
+    order: 1,
+    price: 26,
+    moduleTitles: ['Lighting Fundamentals', 'Indoor Setups', 'Outdoor Direction'],
+  },
+  {
+    title: 'Street Photography Field Guide',
+    description: 'Develop confidence, timing, and a documentary eye for stronger images in fast-moving environments.',
+    coverImage: 'https://images.unsplash.com/photo-1504208434309-cb69f4fe52b0?auto=format&fit=crop&w=1600&q=80',
+    communityIndex: 5,
+    order: 2,
+    price: 23,
+    moduleTitles: ['Observation Skills', 'Shooting in Motion', 'Story Selection'],
+  },
+  {
+    title: 'Editing Workflow in Lightroom',
+    description: 'Create a clean editing pipeline from import to export with presets, culling systems, and final polish.',
+    coverImage: 'https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1600&q=80',
+    communityIndex: 5,
+    order: 3,
+    price: 28,
+    moduleTitles: ['Import & Culling', 'Color Workflow', 'Export & Delivery'],
+  },
+];
+
+function createGeneratedModules(courseTitle, moduleTitles) {
+  return moduleTitles.map((moduleTitle, moduleIndex) => ({
+    title: moduleTitle,
+    lessons: [
+      {
+        title: `${moduleTitle}: Core Principles`,
+        type: 'TEXT',
+        content: `Learn the core principles behind ${moduleTitle.toLowerCase()} inside ${courseTitle}. This lesson focuses on fundamentals, decision-making, and common mistakes to avoid early.`,
+      },
+      {
+        title: `${moduleTitle}: Guided Walkthrough`,
+        type: 'VIDEO',
+        videoUrl: DEFAULT_VIDEO_URL,
+        content: `Follow a practical walkthrough for ${moduleTitle.toLowerCase()} with examples you can apply immediately after watching.`,
+      },
+      {
+        title: `${moduleTitle}: Implementation Sprint`,
+        type: moduleIndex === moduleTitles.length - 1 ? 'QUIZ' : 'TEXT',
+        content: `Use this implementation sprint to turn ${moduleTitle.toLowerCase()} into a repeatable system and document what you will improve next.`,
+      },
+    ],
+  }));
+}
+
+const ALL_COURSES = [
+  ...COURSES,
+  ...EXTRA_COURSE_BLUEPRINTS.map(({ moduleTitles, ...course }) => ({
+    ...course,
+    status: 'PUBLISHED',
+    published: true,
+    modules: createGeneratedModules(course.title, moduleTitles),
+  })),
 ];
 
 const LEVELS = [
@@ -351,7 +558,7 @@ async function seed() {
 
   // Courses
   const createdCourses = [];
-  for (const courseData of COURSES) {
+  for (const courseData of ALL_COURSES) {
     const communityForCourse = communities[courseData.communityIndex];
     const existing = await prisma.course.findFirst({
       where: { communityId: communityForCourse.id, title: courseData.title },
@@ -360,6 +567,7 @@ async function seed() {
       title: courseData.title,
       description: courseData.description,
       coverImage: courseData.coverImage,
+      price: courseData.price ?? null,
       status: courseData.status,
       published: courseData.published,
       order: courseData.order,

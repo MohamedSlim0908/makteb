@@ -17,6 +17,7 @@ import { useMembership } from '../features/community/useMembership';
 import { PostActionMenu } from '../components/course-community/PostActionMenu';
 import { EditPostModal } from '../components/course-community/EditPostModal';
 import { DeleteConfirmModal } from '../components/course-community/DeleteConfirmModal';
+import { RichContent } from '../components/ui/RichContent';
 
 function timeAgo(dateStr) {
   const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
@@ -120,7 +121,7 @@ export function PostPage() {
           </div>
 
           <h1 className="text-2xl font-bold text-gray-900 mb-3">{post.title}</h1>
-          <p className="text-gray-600 whitespace-pre-wrap leading-relaxed">{post.content}</p>
+          <RichContent content={post.content} />
 
           <div className="flex gap-5 mt-6 pt-4 border-t border-gray-100">
             <button
@@ -183,7 +184,7 @@ export function PostPage() {
         )}
 
         {/* Comments */}
-        <div className="space-y-0">
+        <div id="comments" className="space-y-0 scroll-mt-24">
           {post.comments?.length ? (
             post.comments.map((comment) => (
               <div key={comment.id} className="py-4 border-b border-gray-100 last:border-0">

@@ -9,6 +9,7 @@ export const COURSE_TABS = [
 
 export const POST_CATEGORIES = [
   { value: 'ALL', label: 'All' },
+  { value: 'GENERAL', label: 'General' },
   { value: 'WINS', label: 'Wins' },
   { value: 'BRANDING_CLIENTS', label: 'Branding / Clients' },
   { value: 'WORKFLOW_PRODUCTIVITY', label: 'Workflow / Productivity' },

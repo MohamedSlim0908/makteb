@@ -27,6 +27,7 @@ import {
   getMockCalendarEvents,
 } from '../components/course-community/mockData';
 import { EventNotice } from '../components/course-community/EventNotice';
+import { isRichTextEmpty } from '../lib/richText';
 
 function sortModules(modules = []) {
   return [...modules].sort((a, b) => a.order - b.order);
@@ -186,7 +187,7 @@ export function CoursePage() {
 
   const [postTitle, setPostTitle] = useState('');
   const [postContent, setPostContent] = useState('');
-  const [postCategory, setPostCategory] = useState('GENERAL');
+  const [postCategory, setPostCategory] = useState('');
   const [activeCategory, setActiveCategory] = useState('ALL');
 
   const requestedTab = searchParams.get('tab');
@@ -277,7 +278,7 @@ export function CoursePage() {
       queryClient.invalidateQueries({ queryKey: ['course-community-posts', communityId, activeCategory] });
       setPostTitle('');
       setPostContent('');
-      setPostCategory('GENERAL');
+      setPostCategory('');
       toast.success('Post created!');
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to create post'),
@@ -302,16 +303,15 @@ export function CoursePage() {
     setSearchParams(next);
   }
 
-  function handleCreatePost(e) {
-    e.preventDefault();
+  function handleCreatePost() {
     if (!isEnrolled) { toast.error('Enroll first.'); return; }
-    if (!postTitle.trim() || !postContent.trim()) return;
+    if (!postTitle.trim() || isRichTextEmpty(postContent)) return;
     createPostMutation.mutateAsync({
       communityId,
       title: postTitle.trim(),
-      content: postContent.trim(),
+      content: postContent,
       type: 'DISCUSSION',
-      category: postCategory,
+      category: postCategory || undefined,
     });
   }
 
@@ -370,6 +370,7 @@ export function CoursePage() {
                 {isEnrolled && user && (
                   <PostComposer
                     user={user}
+                    contextName={course?.community?.name || course?.title || 'this community'}
                     title={postTitle}
                     content={postContent}
                     category={postCategory}
@@ -395,7 +396,13 @@ export function CoursePage() {
                 ) : posts?.length ? (
                   <div className="space-y-3">
                     {posts.map((post) => (
-                      <PostCard key={post.id} post={post} onToggleLike={handleLike} likePending={likeMutation.isPending} />
+                      <PostCard
+                        key={post.id}
+                        post={post}
+                        onToggleLike={handleLike}
+                        likePending={likeMutation.isPending}
+                        currentUserId={user?.id}
+                      />
                     ))}
                   </div>
                 ) : (

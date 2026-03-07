@@ -2,6 +2,7 @@ import { Heart, MessageCircle, Pin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Avatar } from '../ui/Avatar';
 import { PostActionMenu } from './PostActionMenu';
+import { RichContent } from '../ui/RichContent';
 
 function timeAgo(value) {
   const seconds = Math.floor((Date.now() - new Date(value).getTime()) / 1000);
@@ -29,6 +30,9 @@ const MODERATOR_ROLES = ['OWNER', 'ADMIN', 'MODERATOR'];
 export function PostCard({ post, onToggleLike, likePending, currentUserId, memberRole, onEdit, onDelete, onTogglePin }) {
   const isAuthor = currentUserId && (post.authorId === currentUserId || post.author?.id === currentUserId);
   const isModerator = MODERATOR_ROLES.includes(memberRole);
+  const postUrl = `/post/${post.id}`;
+  const commentsUrl = `${postUrl}#comments`;
+
   return (
     <article className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:border-gray-300 transition-colors">
       <div className="p-5">
@@ -63,14 +67,12 @@ export function PostCard({ post, onToggleLike, likePending, currentUserId, membe
         </div>
 
         {/* Content */}
-        <Link to={`/post/${post.id}`} className="block group">
+        <Link to={postUrl} className="group block">
           <h3 className="text-base font-bold text-gray-900 mb-1.5 group-hover:text-gray-700 transition-colors">
             {post.title}
           </h3>
-          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap line-clamp-3">
-            {post.content}
-          </p>
         </Link>
+        <RichContent content={post.content} preview className="mt-2" />
       </div>
 
       {/* Actions */}
@@ -86,7 +88,7 @@ export function PostCard({ post, onToggleLike, likePending, currentUserId, membe
           <Heart className="w-4 h-4" fill={post.isLiked ? 'currentColor' : 'none'} />
           <span>{post.likeCount || 0}</span>
         </button>
-        <Link to={`/post/${post.id}`} className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">
+        <Link to={commentsUrl} className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">
           <MessageCircle className="w-4 h-4" />
           <span>{post.commentCount || 0}</span>
         </Link>

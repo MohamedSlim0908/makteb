@@ -22,6 +22,20 @@ const updateProfileSchema = z.object({
   avatar: z.string().url().optional(),
 });
 
+const updateEmailSchema = z.object({
+  email: z.string().email(),
+  currentPassword: z.string().min(1),
+});
+
+const updatePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8),
+});
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
 function handleOAuthCallback(res, err, user) {
   if (err || !user) {
     res.redirect(`${env.clientUrl}/login?error=auth_failed`);
@@ -47,6 +61,11 @@ router.post('/login', (req, res, next) => {
   })(req, res, next);
 });
 
+router.post('/forgot-password', validate(forgotPasswordSchema), async (req, res) => {
+  const result = await authService.requestPasswordReset(req.body.email);
+  res.json(result);
+});
+
 router.post('/refresh', async (req, res) => {
   const token = req.cookies?.refreshToken;
   if (!token) throw new AppError('No refresh token', 401);
@@ -63,6 +82,16 @@ router.get('/me', requireAuth, async (req, res) => {
 router.put('/me', requireAuth, validate(updateProfileSchema), async (req, res) => {
   const user = await authService.updateUserProfile(req.userId, req.body);
   res.json({ user });
+});
+
+router.put('/email', requireAuth, validate(updateEmailSchema), async (req, res) => {
+  const user = await authService.updateUserEmail(req.userId, req.body);
+  res.json({ user });
+});
+
+router.put('/password', requireAuth, validate(updatePasswordSchema), async (req, res) => {
+  await authService.updateUserPassword(req.userId, req.body);
+  res.json({ message: 'Password updated' });
 });
 
 router.post('/logout', (_req, res) => {
