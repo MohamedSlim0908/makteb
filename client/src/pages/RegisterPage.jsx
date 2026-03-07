@@ -185,8 +185,8 @@ export function RegisterPage() {
     setIsSubmitting(true);
 
     try {
-      await register(name, normalizedEmail, password);
-      navigate('/discover');
+      const user = await register(name, normalizedEmail, password);
+      navigate(user.role === 'CREATOR' ? '/creator/community' : '/discover');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {

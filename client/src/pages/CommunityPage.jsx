@@ -102,7 +102,10 @@ export function CommunityPage() {
   const memberRole = membership?.role;
   const availableTabs = useMemo(() => getAvailableTabs(isMember), [isMember]);
   const defaultTab = availableTabs[0]?.id || 'about';
-  const activeTab = availableTabs.some((tab) => tab.id === requestedTab) ? requestedTab : defaultTab;
+  const isResolvingAccess = communityLoading || (user && membershipLoading);
+  const activeTab = isResolvingAccess
+    ? (TABS.some((tab) => tab.id === requestedTab) ? requestedTab : defaultTab)
+    : (availableTabs.some((tab) => tab.id === requestedTab) ? requestedTab : defaultTab);
 
   // Members
   const { data: members } = useQuery({
@@ -176,12 +179,13 @@ export function CommunityPage() {
     .filter(Boolean);
 
   useEffect(() => {
+    if (isResolvingAccess) return;
     if (requestedTab !== activeTab) {
       const next = new URLSearchParams(searchParams);
       next.set('tab', activeTab);
       setSearchParams(next, { replace: true });
     }
-  }, [activeTab, requestedTab, searchParams, setSearchParams]);
+  }, [activeTab, requestedTab, searchParams, setSearchParams, isResolvingAccess]);
 
   // Mutations
   const joinMutation = useMutation({
@@ -311,7 +315,7 @@ export function CommunityPage() {
                 {user && isMember ? (
                   <>
                     {(memberRole === 'OWNER' || memberRole === 'ADMIN') && (
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/community/${slug}/settings`)}>
                         <Settings className="w-4 h-4" />
                       </Button>
                     )}
@@ -481,7 +485,7 @@ export function CommunityPage() {
                             <span className="w-5 text-xs font-bold text-gray-400 text-center">{idx + 1}</span>
                             <Avatar src={entry.user?.avatar} name={entry.user?.name} size="sm" />
                             <span className="text-sm text-gray-700 truncate flex-1">{entry.user?.name}</span>
-                            <span className="text-xs font-medium text-primary-600">{entry.totalPoints} pts</span>
+                            <span className="text-xs font-medium text-primary-600">{entry.totalPoints ?? entry.points} pts</span>
                           </div>
                         ))}
                       </div>
@@ -509,7 +513,7 @@ export function CommunityPage() {
                       <p className="text-sm text-gray-500 mt-1 line-clamp-2">{course.description}</p>
                     )}
                     <div className="flex items-center gap-3 mt-3 text-xs text-gray-400">
-                      <span>{course.modules?.length || 0} modules</span>
+                      <span>{course._count?.modules || course.modules?.length || 0} modules</span>
                       <span className="w-1 h-1 bg-gray-300 rounded-full" />
                       <span>{course.price ? `$${course.price}` : 'Free'}</span>
                     </div>

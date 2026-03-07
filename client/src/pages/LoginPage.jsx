@@ -25,8 +25,8 @@ export function LoginPage() {
     setError('');
     setIsSubmitting(true);
     try {
-      await login(email, password);
-      navigate('/discover');
+      const user = await login(email, password);
+      navigate(user.role === 'CREATOR' ? '/creator/community' : '/discover');
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid email or password');
     } finally {

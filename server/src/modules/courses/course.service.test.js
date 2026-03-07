@@ -19,6 +19,7 @@ vi.mock('../../lib/prisma.js', () => ({
       create: vi.fn(),
     },
     module: {
+      findUnique: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
@@ -281,9 +282,13 @@ describe('createModule()', () => {
 // ── updateModule ────────────────────────────────────────────
 describe('updateModule()', () => {
   it('updates module title and order', async () => {
+    prisma.module.findUnique.mockResolvedValue({
+      id: 'mod-1',
+      course: { creatorId: 'creator-1' },
+    });
     prisma.module.update.mockResolvedValue({ id: 'mod-1', title: 'Updated', order: 1, lessons: [] });
 
-    const result = await updateModule('mod-1', { title: 'Updated', order: 1 });
+    const result = await updateModule('creator-1', 'mod-1', { title: 'Updated', order: 1 });
 
     expect(result.title).toBe('Updated');
     expect(prisma.module.update).toHaveBeenCalledWith({
@@ -292,16 +297,40 @@ describe('updateModule()', () => {
       include: { lessons: true },
     });
   });
+
+  it('throws 403 when user is not course creator', async () => {
+    prisma.module.findUnique.mockResolvedValue({
+      id: 'mod-1',
+      course: { creatorId: 'creator-1' },
+    });
+
+    await expect(updateModule('other-user', 'mod-1', { title: 'X' }))
+      .rejects.toThrow('Not authorized');
+  });
 });
 
 // ── deleteModule ────────────────────────────────────────────
 describe('deleteModule()', () => {
   it('deletes the module', async () => {
+    prisma.module.findUnique.mockResolvedValue({
+      id: 'mod-1',
+      course: { creatorId: 'creator-1' },
+    });
     prisma.module.delete.mockResolvedValue({});
 
-    await deleteModule('mod-1');
+    await deleteModule('creator-1', 'mod-1');
 
     expect(prisma.module.delete).toHaveBeenCalledWith({ where: { id: 'mod-1' } });
+  });
+
+  it('throws 403 when user is not course creator', async () => {
+    prisma.module.findUnique.mockResolvedValue({
+      id: 'mod-1',
+      course: { creatorId: 'creator-1' },
+    });
+
+    await expect(deleteModule('other-user', 'mod-1'))
+      .rejects.toThrow('Not authorized');
   });
 });
 
@@ -367,11 +396,10 @@ describe('getCourseProgress()', () => {
     expect(result).toEqual(enrollment);
   });
 
-  it('throws 404 when course not found and no enrollment', async () => {
+  it('throws 404 when not enrolled', async () => {
     prisma.enrollment.findUnique.mockResolvedValue(null);
-    prisma.course.findUnique.mockResolvedValue(null);
 
-    await expect(getCourseProgress('user-1', 'unknown')).rejects.toThrow('Course not found');
+    await expect(getCourseProgress('user-1', 'unknown')).rejects.toThrow('Not enrolled in this course');
   });
 });
 

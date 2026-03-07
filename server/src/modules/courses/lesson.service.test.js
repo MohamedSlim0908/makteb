@@ -8,6 +8,9 @@ vi.mock('../../lib/prisma.js', () => ({
       update: vi.fn(),
       delete: vi.fn(),
     },
+    module: {
+      findUnique: vi.fn(),
+    },
     enrollment: {
       findUnique: vi.fn(),
       update: vi.fn(),
@@ -33,6 +36,14 @@ import {
 
 beforeEach(() => vi.clearAllMocks());
 
+const CREATOR_ID = 'creator-1';
+
+const MODULE_WITH_COURSE = {
+  id: 'module-1',
+  courseId: 'course-1',
+  course: { creatorId: CREATOR_ID },
+};
+
 const LESSON = {
   id: 'lesson-1',
   moduleId: 'module-1',
@@ -42,6 +53,11 @@ const LESSON = {
   videoUrl: null,
   duration: 10,
   order: 0,
+};
+
+const LESSON_WITH_AUTH = {
+  ...LESSON,
+  module: { course: { creatorId: CREATOR_ID } },
 };
 
 const LESSON_WITH_MODULE = {
@@ -80,9 +96,10 @@ describe('getLesson()', () => {
 // ── createLesson ────────────────────────────────────────────
 describe('createLesson()', () => {
   it('creates a lesson', async () => {
+    prisma.module.findUnique.mockResolvedValue(MODULE_WITH_COURSE);
     prisma.lesson.create.mockResolvedValue(LESSON);
 
-    const result = await createLesson({
+    const result = await createLesson(CREATOR_ID, {
       moduleId: 'module-1',
       title: 'Intro to JS',
       type: 'TEXT',
@@ -100,9 +117,10 @@ describe('createLesson()', () => {
   });
 
   it('defaults type to TEXT when not specified', async () => {
+    prisma.module.findUnique.mockResolvedValue(MODULE_WITH_COURSE);
     prisma.lesson.create.mockResolvedValue(LESSON);
 
-    await createLesson({ moduleId: 'module-1', title: 'Lesson' });
+    await createLesson(CREATOR_ID, { moduleId: 'module-1', title: 'Lesson' });
 
     expect(prisma.lesson.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ type: 'TEXT' }),
@@ -110,23 +128,39 @@ describe('createLesson()', () => {
   });
 
   it('defaults order to 0 when not specified', async () => {
+    prisma.module.findUnique.mockResolvedValue(MODULE_WITH_COURSE);
     prisma.lesson.create.mockResolvedValue(LESSON);
 
-    await createLesson({ moduleId: 'module-1', title: 'Lesson' });
+    await createLesson(CREATOR_ID, { moduleId: 'module-1', title: 'Lesson' });
 
     expect(prisma.lesson.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ order: 0 }),
     });
+  });
+
+  it('throws 403 when user is not course creator', async () => {
+    prisma.module.findUnique.mockResolvedValue(MODULE_WITH_COURSE);
+
+    await expect(createLesson('other-user', { moduleId: 'module-1', title: 'Lesson' }))
+      .rejects.toThrow('Not authorized');
+  });
+
+  it('throws 404 when module not found', async () => {
+    prisma.module.findUnique.mockResolvedValue(null);
+
+    await expect(createLesson(CREATOR_ID, { moduleId: 'unknown', title: 'Lesson' }))
+      .rejects.toThrow('Module not found');
   });
 });
 
 // ── updateLesson ────────────────────────────────────────────
 describe('updateLesson()', () => {
   it('updates lesson fields', async () => {
+    prisma.lesson.findUnique.mockResolvedValue(LESSON_WITH_AUTH);
     const updated = { ...LESSON, title: 'Updated Title' };
     prisma.lesson.update.mockResolvedValue(updated);
 
-    const result = await updateLesson('lesson-1', { title: 'Updated Title' });
+    const result = await updateLesson(CREATOR_ID, 'lesson-1', { title: 'Updated Title' });
 
     expect(result.title).toBe('Updated Title');
     expect(prisma.lesson.update).toHaveBeenCalledWith({
@@ -134,16 +168,31 @@ describe('updateLesson()', () => {
       data: expect.objectContaining({ title: 'Updated Title' }),
     });
   });
+
+  it('throws 403 when user is not course creator', async () => {
+    prisma.lesson.findUnique.mockResolvedValue(LESSON_WITH_AUTH);
+
+    await expect(updateLesson('other-user', 'lesson-1', { title: 'X' }))
+      .rejects.toThrow('Not authorized');
+  });
 });
 
 // ── deleteLesson ────────────────────────────────────────────
 describe('deleteLesson()', () => {
   it('deletes the lesson', async () => {
+    prisma.lesson.findUnique.mockResolvedValue(LESSON_WITH_AUTH);
     prisma.lesson.delete.mockResolvedValue({});
 
-    await deleteLesson('lesson-1');
+    await deleteLesson(CREATOR_ID, 'lesson-1');
 
     expect(prisma.lesson.delete).toHaveBeenCalledWith({ where: { id: 'lesson-1' } });
+  });
+
+  it('throws 403 when user is not course creator', async () => {
+    prisma.lesson.findUnique.mockResolvedValue(LESSON_WITH_AUTH);
+
+    await expect(deleteLesson('other-user', 'lesson-1'))
+      .rejects.toThrow('Not authorized');
   });
 });
 
@@ -225,14 +274,22 @@ describe('completeLesson()', () => {
 // ── reorderLessons ──────────────────────────────────────────
 describe('reorderLessons()', () => {
   it('updates order for each lesson', async () => {
+    prisma.module.findUnique.mockResolvedValue(MODULE_WITH_COURSE);
     prisma.lesson.update.mockResolvedValue({});
 
-    await reorderLessons('module-1', ['l3', 'l1', 'l2']);
+    await reorderLessons(CREATOR_ID, 'module-1', ['l3', 'l1', 'l2']);
 
     expect(prisma.$transaction).toHaveBeenCalled();
     expect(prisma.lesson.update).toHaveBeenCalledTimes(3);
     expect(prisma.lesson.update).toHaveBeenCalledWith({ where: { id: 'l3' }, data: { order: 0 } });
     expect(prisma.lesson.update).toHaveBeenCalledWith({ where: { id: 'l1' }, data: { order: 1 } });
     expect(prisma.lesson.update).toHaveBeenCalledWith({ where: { id: 'l2' }, data: { order: 2 } });
+  });
+
+  it('throws 403 when user is not course creator', async () => {
+    prisma.module.findUnique.mockResolvedValue(MODULE_WITH_COURSE);
+
+    await expect(reorderLessons('other-user', 'module-1', ['l1']))
+      .rejects.toThrow('Not authorized');
   });
 });

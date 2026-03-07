@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import slugify from 'slug';
 import { prisma } from '../../lib/prisma.js';
 import { AppError } from '../../middleware/error-handler.js';
@@ -115,7 +116,7 @@ export async function joinCommunity(userId, communityId) {
 
   if (community.price && Number(community.price) > 0) {
     const payment = await prisma.payment.findFirst({
-      where: { userId, type: 'COMMUNITY', referenceId: communityId, status: 'COMPLETED' },
+      where: { userId, type: 'COMMUNITY', referenceId: communityId, status: { in: ['COMPLETED', 'SUCCEEDED'] } },
     });
     if (!payment) throw new AppError('Payment required', 402);
   }
@@ -193,4 +194,56 @@ export async function updateMemberRole(actorId, communityId, targetUserId, role)
     where: { userId_communityId: { userId: targetUserId, communityId } },
     data: { role },
   });
+}
+
+export async function createInvite(actorId, communityId, email) {
+  const actorMembership = await prisma.communityMember.findUnique({
+    where: { userId_communityId: { userId: actorId, communityId } },
+  });
+  if (!actorMembership || !['OWNER', 'ADMIN'].includes(actorMembership.role)) {
+    throw new AppError('Not authorized', 403);
+  }
+
+  const invite = await prisma.invite.create({
+    data: {
+      communityId,
+      invitedEmail: email,
+      invitedById: actorId,
+      token: crypto.randomUUID(),
+      status: 'PENDING',
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    },
+  });
+
+  return invite;
+}
+
+export async function listInvites(actorId, communityId) {
+  const actorMembership = await prisma.communityMember.findUnique({
+    where: { userId_communityId: { userId: actorId, communityId } },
+  });
+  if (!actorMembership || !['OWNER', 'ADMIN'].includes(actorMembership.role)) {
+    throw new AppError('Not authorized', 403);
+  }
+
+  return prisma.invite.findMany({
+    where: { communityId, status: 'PENDING' },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+export async function deleteInvite(actorId, communityId, inviteId) {
+  const actorMembership = await prisma.communityMember.findUnique({
+    where: { userId_communityId: { userId: actorId, communityId } },
+  });
+  if (!actorMembership || !['OWNER', 'ADMIN'].includes(actorMembership.role)) {
+    throw new AppError('Not authorized', 403);
+  }
+
+  const invite = await prisma.invite.findUnique({ where: { id: inviteId } });
+  if (!invite || invite.communityId !== communityId) {
+    throw new AppError('Invite not found', 404);
+  }
+
+  await prisma.invite.delete({ where: { id: inviteId } });
 }

@@ -56,4 +56,57 @@ router.get('/levels/:communityId', async (req, res) => {
   res.json({ levels });
 });
 
+router.post('/levels/:communityId', requireAuth, async (req, res) => {
+  const communityId = param(req, 'communityId');
+  const membership = await prisma.communityMember.findUnique({
+    where: { userId_communityId: { userId: req.userId, communityId } },
+  });
+  if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+    return res.status(403).json({ message: 'Not authorized' });
+  }
+
+  const { name, minPoints, unlockDescription, badgeIcon } = req.body;
+  const level = await prisma.level.create({
+    data: { communityId, name, minPoints, unlockDescription, badgeIcon },
+  });
+  res.status(201).json({ level });
+});
+
+router.put('/levels/:communityId/:levelId', requireAuth, async (req, res) => {
+  const communityId = param(req, 'communityId');
+  const levelId = param(req, 'levelId');
+  const membership = await prisma.communityMember.findUnique({
+    where: { userId_communityId: { userId: req.userId, communityId } },
+  });
+  if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+    return res.status(403).json({ message: 'Not authorized' });
+  }
+
+  const { name, minPoints, unlockDescription, badgeIcon } = req.body;
+  const level = await prisma.level.update({
+    where: { id: levelId },
+    data: {
+      ...(name !== undefined && { name }),
+      ...(minPoints !== undefined && { minPoints }),
+      ...(unlockDescription !== undefined && { unlockDescription }),
+      ...(badgeIcon !== undefined && { badgeIcon }),
+    },
+  });
+  res.json({ level });
+});
+
+router.delete('/levels/:communityId/:levelId', requireAuth, async (req, res) => {
+  const communityId = param(req, 'communityId');
+  const levelId = param(req, 'levelId');
+  const membership = await prisma.communityMember.findUnique({
+    where: { userId_communityId: { userId: req.userId, communityId } },
+  });
+  if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+    return res.status(403).json({ message: 'Not authorized' });
+  }
+
+  await prisma.level.delete({ where: { id: levelId } });
+  res.json({ message: 'Level deleted' });
+});
+
 export default router;

@@ -72,12 +72,12 @@ router.post('/:id/modules', requireAuth, validate(createModuleSchema), async (re
 });
 
 router.put('/modules/:moduleId', requireAuth, validate(createModuleSchema.partial()), async (req, res) => {
-  const mod = await courseService.updateModule(param(req, 'moduleId'), req.body);
+  const mod = await courseService.updateModule(req.userId, param(req, 'moduleId'), req.body);
   res.json({ module: mod });
 });
 
 router.delete('/modules/:moduleId', requireAuth, async (req, res) => {
-  await courseService.deleteModule(param(req, 'moduleId'));
+  await courseService.deleteModule(req.userId, param(req, 'moduleId'));
   res.json({ message: 'Module deleted' });
 });
 
