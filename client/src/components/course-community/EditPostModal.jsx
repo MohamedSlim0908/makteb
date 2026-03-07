@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { TiptapEditor } from '../ui/TiptapEditor';
+import { isRichTextEmpty } from '../../lib/richText';
 
 const CATEGORIES = [
   { value: 'GENERAL', label: 'General' },
@@ -14,11 +16,13 @@ export function EditPostModal({ post, onSave, onClose, isPending }) {
   const [title, setTitle] = useState(post.title);
   const [content, setContent] = useState(post.content);
   const [category, setCategory] = useState(post.category || 'GENERAL');
+  const [isEditorUploading, setIsEditorUploading] = useState(false);
+  const isSaveDisabled = isPending || isEditorUploading || !title.trim() || isRichTextEmpty(content);
 
   function handleSubmit(e) {
     e.preventDefault();
-    if (!title.trim() || !content.trim()) return;
-    onSave({ postId: post.id, title: title.trim(), content: content.trim(), category });
+    if (isSaveDisabled) return;
+    onSave({ postId: post.id, title: title.trim(), content, category });
   }
 
   return (
@@ -33,12 +37,12 @@ export function EditPostModal({ post, onSave, onClose, isPending }) {
 
         <div className="w-full">
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Content</label>
-          <textarea
+          <TiptapEditor
             value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={5}
-            placeholder="Write your post..."
-            className="w-full px-3 py-2 rounded-lg text-sm bg-white text-gray-900 placeholder-gray-400 border border-gray-300 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 resize-none transition-all duration-150"
+            onChange={setContent}
+            placeholder="Update your post..."
+            minHeightClassName="min-h-[220px]"
+            onUploadStateChange={setIsEditorUploading}
           />
         </div>
 
@@ -65,7 +69,7 @@ export function EditPostModal({ post, onSave, onClose, isPending }) {
             type="submit"
             size="sm"
             isLoading={isPending}
-            disabled={!title.trim() || !content.trim()}
+            disabled={isSaveDisabled}
           >
             Save Changes
           </Button>

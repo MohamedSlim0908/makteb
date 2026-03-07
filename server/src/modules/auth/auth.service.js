@@ -3,6 +3,10 @@ import { AppError } from '../../middleware/error-handler.js';
 import { USER_PROFILE_SELECT } from '../../lib/db-selects.js';
 import { comparePassword, hashPassword, verifyRefreshToken } from './auth.utils.js';
 
+const FORGOT_PASSWORD_RESPONSE = {
+  message: 'If an account exists for that email, the password reset request has been received.',
+};
+
 export async function registerUser({ email, password, name }) {
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) throw new AppError('Email already registered', 409);
@@ -11,6 +15,24 @@ export async function registerUser({ email, password, name }) {
   return prisma.user.create({
     data: { email, name, passwordHash, provider: 'LOCAL' },
   });
+}
+
+export async function requestPasswordReset(email) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const user = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+    select: {
+      id: true,
+      provider: true,
+      passwordHash: true,
+    },
+  });
+
+  if (!user || user.provider !== 'LOCAL' || !user.passwordHash) {
+    return FORGOT_PASSWORD_RESPONSE;
+  }
+
+  return FORGOT_PASSWORD_RESPONSE;
 }
 
 export async function resolveRefreshToken(refreshToken) {

@@ -105,6 +105,21 @@ describe('listCommunities()', () => {
     );
   });
 
+  it('applies category filter', async () => {
+    prisma.community.findMany.mockResolvedValue([]);
+    prisma.community.count.mockResolvedValue(0);
+
+    await listCommunities({ category: 'tech', skip: 0, take: 12, page: 1 });
+
+    expect(prisma.community.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          category: 'tech',
+        }),
+      })
+    );
+  });
+
   it('returns empty when no communities found', async () => {
     prisma.community.findMany.mockResolvedValue([]);
     prisma.community.count.mockResolvedValue(0);

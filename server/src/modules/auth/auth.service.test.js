@@ -24,6 +24,7 @@ import { prisma } from '../../lib/prisma.js';
 import { comparePassword, hashPassword, verifyRefreshToken } from './auth.utils.js';
 import {
   registerUser,
+  requestPasswordReset,
   resolveRefreshToken,
   getCurrentUser,
   updateUserProfile,
@@ -70,6 +71,32 @@ describe('registerUser()', () => {
 });
 
 // ── resolveRefreshToken ───────────────────────────────────
+describe('requestPasswordReset()', () => {
+  it('returns a generic message for a matching local account', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'user-1',
+      provider: 'LOCAL',
+      passwordHash: '$2b$12$hashedvalue',
+    });
+
+    const result = await requestPasswordReset('Ali@Makteb.tn');
+
+    expect(prisma.user.findUnique).toHaveBeenCalledWith({
+      where: { email: 'ali@makteb.tn' },
+      select: { id: true, provider: true, passwordHash: true },
+    });
+    expect(result.message).toMatch(/password reset request/i);
+  });
+
+  it('returns the same generic message when no account is found', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    const result = await requestPasswordReset('missing@makteb.tn');
+
+    expect(result.message).toMatch(/password reset request/i);
+  });
+});
+
 describe('resolveRefreshToken()', () => {
   it('returns user when refresh token is valid', async () => {
     verifyRefreshToken.mockReturnValue({ userId: 'user-1', role: 'MEMBER' });

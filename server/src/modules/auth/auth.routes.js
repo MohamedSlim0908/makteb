@@ -32,6 +32,10 @@ const updatePasswordSchema = z.object({
   newPassword: z.string().min(8),
 });
 
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
 function handleOAuthCallback(res, err, user) {
   if (err || !user) {
     res.redirect(`${env.clientUrl}/login?error=auth_failed`);
@@ -55,6 +59,11 @@ router.post('/login', (req, res, next) => {
     const accessToken = issueTokenPair(res, user);
     res.json({ user: formatUserResponse(user), accessToken });
   })(req, res, next);
+});
+
+router.post('/forgot-password', validate(forgotPasswordSchema), async (req, res) => {
+  const result = await authService.requestPasswordReset(req.body.email);
+  res.json(result);
 });
 
 router.post('/refresh', async (req, res) => {

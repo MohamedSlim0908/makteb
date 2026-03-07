@@ -21,7 +21,7 @@ export function getErrorMessage(err, fallback = 'Something went wrong') {
 }
 
 // Paths that should never trigger a token-refresh redirect
-const AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/refresh'];
+const AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/forgot-password'];
 
 api.interceptors.response.use(
   (res) => res,

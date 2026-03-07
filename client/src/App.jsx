@@ -8,6 +8,9 @@ import { AppLayout } from './components/layout/AppLayout';
 const LandingPage = lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('./pages/RegisterPage').then(m => ({ default: m.RegisterPage })));
+const ForgotPasswordPage = lazy(() =>
+  import('./pages/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage }))
+);
 const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage').then(m => ({ default: m.AuthCallbackPage })));
 const DiscoverPage = lazy(() => import('./pages/DiscoverPage').then(m => ({ default: m.DiscoverPage })));
 const CommunityPage = lazy(() => import('./pages/CommunityPage').then(m => ({ default: m.CommunityPage })));
@@ -55,6 +58,7 @@ export default function App() {
               </Route>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/auth/callback" element={<AuthCallbackPage />} />
               <Route path="/creator" element={<CreatorLandingPage />} />
               <Route path="/creator/pricing" element={<CreatorPricingPage />} />

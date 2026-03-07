@@ -79,6 +79,16 @@ describe('GET /', () => {
     );
   });
 
+  it('supports category query', async () => {
+    communityService.listCommunities.mockResolvedValue({ communities: [], total: 0, page: 1, totalPages: 0 });
+
+    await request(buildApp()).get('/?category=tech');
+
+    expect(communityService.listCommunities).toHaveBeenCalledWith(
+      expect.objectContaining({ category: 'tech' })
+    );
+  });
+
   it('defaults to page 1, limit 12', async () => {
     communityService.listCommunities.mockResolvedValue({ communities: [], total: 0, page: 1, totalPages: 0 });
 

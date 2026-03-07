@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('./auth.service.js', () => ({
   registerUser: vi.fn(),
+  requestPasswordReset: vi.fn(),
   resolveRefreshToken: vi.fn(),
   getCurrentUser: vi.fn(),
   updateUserProfile: vi.fn(),
@@ -130,6 +131,29 @@ describe('POST /login', () => {
 
     expect(res.status).toBe(401);
     expect(res.body.error).toBe('Invalid email or password');
+  });
+});
+
+describe('POST /forgot-password', () => {
+  it('accepts a valid email and returns a generic success message', async () => {
+    authService.requestPasswordReset.mockResolvedValue({
+      message: 'If an account exists for that email, the password reset request has been received.',
+    });
+
+    const res = await request(buildApp())
+      .post('/forgot-password')
+      .send({ email: 'ali@makteb.tn' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/password reset request/i);
+  });
+
+  it('returns 400 for an invalid email payload', async () => {
+    const res = await request(buildApp())
+      .post('/forgot-password')
+      .send({ email: 'not-an-email' });
+
+    expect(res.status).toBe(400);
   });
 });
 
