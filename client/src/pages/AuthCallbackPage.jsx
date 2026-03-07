@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { setAccessToken } from '../hooks/useAuth';
+import { api } from '../lib/api';
 import { Button } from '../components/ui/Button';
 
 export function AuthCallbackPage() {
@@ -23,7 +24,12 @@ export function AuthCallbackPage() {
     if (token) {
       localStorage.setItem('accessToken', token);
       setAccessToken(token);
-      navigate('/discover', { replace: true });
+      api.get('/auth/me').then(({ data }) => {
+        const dest = data.user?.role === 'CREATOR' ? '/creator/community' : '/discover';
+        navigate(dest, { replace: true });
+      }).catch(() => {
+        navigate('/discover', { replace: true });
+      });
     } else {
       setError('No authentication token received. Please try signing in again.');
     }

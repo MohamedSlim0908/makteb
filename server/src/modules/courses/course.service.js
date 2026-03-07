@@ -169,7 +169,14 @@ export async function createModule(creatorId, courseId, { title, order }) {
   });
 }
 
-export async function updateModule(moduleId, { title, order }) {
+export async function updateModule(userId, moduleId, { title, order }) {
+  const mod = await prisma.module.findUnique({
+    where: { id: moduleId },
+    include: { course: { select: { creatorId: true } } },
+  });
+  if (!mod) throw new AppError('Module not found', 404);
+  if (mod.course.creatorId !== userId) throw new AppError('Not authorized', 403);
+
   return prisma.module.update({
     where: { id: moduleId },
     data: { title, order },
@@ -177,7 +184,14 @@ export async function updateModule(moduleId, { title, order }) {
   });
 }
 
-export async function deleteModule(moduleId) {
+export async function deleteModule(userId, moduleId) {
+  const mod = await prisma.module.findUnique({
+    where: { id: moduleId },
+    include: { course: { select: { creatorId: true } } },
+  });
+  if (!mod) throw new AppError('Module not found', 404);
+  if (mod.course.creatorId !== userId) throw new AppError('Not authorized', 403);
+
   await prisma.module.delete({ where: { id: moduleId } });
 }
 
@@ -195,7 +209,7 @@ export async function enrollInCourse(userId, courseId) {
 
   if (course.price && Number(course.price) > 0) {
     const payment = await prisma.payment.findFirst({
-      where: { userId, type: 'COURSE', referenceId: courseId, status: 'COMPLETED' },
+      where: { userId, type: 'COURSE', referenceId: courseId, status: { in: ['COMPLETED', 'SUCCEEDED'] } },
     });
     if (!payment) throw new AppError('Payment required', 402);
   }
@@ -215,41 +229,11 @@ export async function enrollInCourse(userId, courseId) {
 }
 
 export async function getCourseProgress(userId, courseId) {
-  const existingEnrollment = await prisma.enrollment.findUnique({
+  const enrollment = await prisma.enrollment.findUnique({
     where: { userId_courseId: { userId, courseId } },
   });
-  if (existingEnrollment) return existingEnrollment;
-
-  const course = await prisma.course.findUnique({
-    where: { id: courseId },
-    select: { id: true, communityId: true, price: true },
-  });
-  if (!course) throw new AppError('Course not found', 404);
-
-  const membership = await prisma.communityMember.findUnique({
-    where: { userId_communityId: { userId, communityId: course.communityId } },
-    select: { status: true },
-  });
-
-  if (!membership || membership.status !== 'ACTIVE') {
-    throw new AppError('Not enrolled', 404);
-  }
-
-  if (course.price && Number(course.price) > 0) {
-    const payment = await prisma.payment.findFirst({
-      where: {
-        userId,
-        type: 'COURSE',
-        referenceId: courseId,
-        status: { in: ['COMPLETED', 'SUCCEEDED'] },
-      },
-    });
-    if (!payment) throw new AppError('Payment required', 402);
-  }
-
-  return prisma.enrollment.create({
-    data: { userId, courseId },
-  });
+  if (!enrollment) throw new AppError('Not enrolled in this course', 404);
+  return enrollment;
 }
 
 export async function reorderModules(courseId, moduleIds) {

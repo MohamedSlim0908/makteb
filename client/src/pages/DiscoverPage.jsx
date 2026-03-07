@@ -193,7 +193,7 @@ export function DiscoverPage() {
                   </p>
 
                   <div className="flex items-center gap-3 text-xs text-gray-400 font-medium pt-3 border-t border-gray-100">
-                    <span>{community.memberCount || community._count?.members || 0} members</span>
+                    <span>{`${community.memberCount || community._count?.members || 0} ${(community.memberCount || community._count?.members || 0) === 1 ? 'member' : 'members'}`}</span>
                     <span className="w-1 h-1 bg-gray-300 rounded-full" />
                     <span>{community.price ? `$${community.price}` : 'Free'}</span>
                     {community.visibility === 'PRIVATE' && (

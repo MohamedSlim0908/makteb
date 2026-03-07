@@ -35,7 +35,7 @@ export function CreatorCommunityDashboardPage() {
   const initialCommunityData = useMemo(
     () => ({
       name: groupName,
-      url: `skool.com/${groupSlug || 'small-business-konnect'}-9944`,
+      url: `makteb.com/${groupSlug || 'small-business-konnect'}-9944`,
       privacyType: isPrivate ? 'private' : 'public',
       description: 'Add your group description here by clicking the Settings button.',
       stats: { members: 1, online: 0, admins: 1 },

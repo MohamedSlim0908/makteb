@@ -14,9 +14,11 @@ import {
   Settings,
   X,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../../hooks/useAuth';
 import { api } from '../../lib/api';
 import { Avatar } from '../ui/Avatar';
+import { NotificationPanel } from './NotificationPanel';
 
 export function Navbar() {
   const { user, logout } = useAuth();
@@ -39,11 +41,13 @@ export function Navbar() {
   const [isBrandMenuOpen, setIsBrandMenuOpen] = useState(false);
   const [brandMenuSearch, setBrandMenuSearch] = useState('');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [shellSearch, setShellSearch] = useState('');
 
   const brandMenuRef = useRef(null);
   const userMenuRef = useRef(null);
+  const notifRef = useRef(null);
 
   const { data: courseBrand } = useQuery({
     queryKey: ['navbar-course-brand', courseId],
@@ -97,12 +101,16 @@ export function Navbar() {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
         setIsUserMenuOpen(false);
       }
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setIsNotifOpen(false);
+      }
     }
     function handleEscape(e) {
       if (e.key === 'Escape') {
         setIsBrandMenuOpen(false);
         setBrandMenuSearch('');
         setIsUserMenuOpen(false);
+        setIsNotifOpen(false);
         setIsMobileMenuOpen(false);
       }
     }
@@ -121,6 +129,7 @@ export function Navbar() {
     setIsBrandMenuOpen(false);
     setBrandMenuSearch('');
     setIsUserMenuOpen(false);
+    setIsNotifOpen(false);
     setIsMobileMenuOpen(false);
   }
 
@@ -205,7 +214,10 @@ export function Navbar() {
           disabled
           className="block w-full text-left px-4 py-2.5 text-sm text-gray-400 cursor-not-allowed"
         >
-          Affiliates
+          <span className="flex items-center justify-between w-full">
+            Affiliates
+            <span className="text-[10px] text-gray-300">Coming soon</span>
+          </span>
         </button>
 
         <div className="my-1 border-t border-gray-100" />
@@ -215,7 +227,10 @@ export function Navbar() {
           disabled
           className="block w-full text-left px-4 py-2.5 text-sm text-gray-400 cursor-not-allowed"
         >
-          Help center
+          <span className="flex items-center justify-between w-full">
+            Help center
+            <span className="text-[10px] text-gray-300">Coming soon</span>
+          </span>
         </button>
         <Link
           to="/dashboard"
@@ -358,13 +373,22 @@ export function Navbar() {
             </button>
             {user ? (
               <>
-                <button className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors">
+                <button
+                  onClick={() => toast('Messages coming soon!', { icon: '💬' })}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                >
                   <MessageCircle className="w-[18px] h-[18px]" />
                 </button>
-                <button className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors relative">
-                  <Bell className="w-[18px] h-[18px]" />
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-                </button>
+                <div ref={notifRef} className="relative">
+                  <button
+                    onClick={() => { setIsNotifOpen(!isNotifOpen); setIsUserMenuOpen(false); }}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors relative"
+                  >
+                    <Bell className="w-[18px] h-[18px]" />
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+                  </button>
+                  {isNotifOpen && <NotificationPanel onClose={() => setIsNotifOpen(false)} />}
+                </div>
                 <div ref={userMenuRef} className="relative ml-1">
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
@@ -521,13 +545,22 @@ export function Navbar() {
                 Discover
               </Link>
 
-              <button className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors">
+              <button
+                onClick={() => toast('Messages coming soon!', { icon: '💬' })}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+              >
                 <MessageCircle className="w-[18px] h-[18px]" />
               </button>
-              <button className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors relative">
-                <Bell className="w-[18px] h-[18px]" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
-              </button>
+              <div ref={notifRef} className="relative">
+                <button
+                  onClick={() => { setIsNotifOpen(!isNotifOpen); setIsUserMenuOpen(false); }}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors relative"
+                >
+                  <Bell className="w-[18px] h-[18px]" />
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+                </button>
+                {isNotifOpen && <NotificationPanel onClose={() => setIsNotifOpen(false)} />}
+              </div>
 
               <div ref={userMenuRef} className="relative ml-1">
                 <button
