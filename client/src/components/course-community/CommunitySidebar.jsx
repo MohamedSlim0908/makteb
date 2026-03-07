@@ -38,7 +38,7 @@ export function CommunitySidebar({
         </div>
         <div className="p-4">
           <h3 className="text-lg font-bold text-gray-900">{name}</h3>
-          <p className="text-xs text-gray-400 mt-0.5">skool.com/{slug}</p>
+          <p className="text-xs text-gray-400 mt-0.5">makteb.com/{slug}</p>
           <p className="text-sm text-gray-600 mt-3 leading-relaxed line-clamp-3">
             {description}
           </p>

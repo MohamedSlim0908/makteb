@@ -26,8 +26,8 @@ export function RegisterPage() {
     }
 
     try {
-      await register(name, email, password);
-      navigate('/discover');
+      const user = await register(name, email, password);
+      navigate(user.role === 'CREATOR' ? '/creator/community' : '/discover');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {

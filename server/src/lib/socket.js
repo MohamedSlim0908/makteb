@@ -6,7 +6,13 @@ let io;
 export function initSocket(httpServer) {
   io = new Server(httpServer, {
     cors: {
-      origin: env.clientUrl,
+      origin: env.clientUrls && env.clientUrls.length > 0
+        ? (origin, cb) => {
+            if (!origin || env.clientUrls.includes(origin)) return cb(null, true);
+            if (env.nodeEnv === 'development' && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return cb(null, true);
+            return cb(null, false);
+          }
+        : env.clientUrl,
       credentials: true,
     },
   });

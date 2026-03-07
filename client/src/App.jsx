@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from './lib/theme.jsx';
 import { AppLayout } from './components/layout/AppLayout';
+import { ProtectedRoute } from './components/layout/ProtectedRoute';
+import { AdminRoute } from './components/layout/AdminRoute';
 
 const LandingPage = lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
@@ -21,6 +23,10 @@ const CreatorPricingPage = lazy(() => import('./pages/CreatorPricingPage').then(
 const CreatorCommunityDashboardPage = lazy(() =>
   import('./pages/CreatorCommunityDashboardPage').then(m => ({ default: m.CreatorCommunityDashboardPage }))
 );
+const CommunitySettingsPage = lazy(() => import('./pages/CommunitySettingsPage').then(m => ({ default: m.CommunitySettingsPage })));
+const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
+const SearchPage = lazy(() => import('./pages/SearchPage').then(m => ({ default: m.SearchPage })));
+const PaymentCallbackPage = lazy(() => import('./pages/PaymentCallbackPage').then(m => ({ default: m.PaymentCallbackPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,16 +48,20 @@ export default function App() {
                 <Route path="/" element={<Navigate to="/discover" replace />} />
                 <Route path="/landing" element={<LandingPage />} />
                 <Route path="/discover" element={<DiscoverPage />} />
+                <Route path="/search" element={<SearchPage />} />
                 <Route path="/community/:slug" element={<CommunityPage />} />
+                <Route path="/community/:slug/settings" element={<ProtectedRoute><CommunitySettingsPage /></ProtectedRoute>} />
                 <Route path="/post/:id" element={<PostPage />} />
                 <Route path="/course/:id" element={<CoursePage />} />
-                <Route path="/course/:id/learn" element={<CourseLearnPage />} />
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/course/:id/learn" element={<ProtectedRoute><CourseLearnPage /></ProtectedRoute>} />
+                <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+                <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
               </Route>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/auth/callback" element={<AuthCallbackPage />} />
+              <Route path="/payment/callback" element={<PaymentCallbackPage />} />
               <Route path="/creator" element={<CreatorLandingPage />} />
               <Route path="/creator/pricing" element={<CreatorPricingPage />} />
               <Route path="/creator/community" element={<CreatorCommunityDashboardPage />} />

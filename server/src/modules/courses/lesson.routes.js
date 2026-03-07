@@ -32,17 +32,17 @@ router.get('/:id', async (req, res) => {
 });
 
 router.post('/', requireAuth, validate(createLessonSchema), async (req, res) => {
-  const lesson = await lessonService.createLesson(req.body);
+  const lesson = await lessonService.createLesson(req.userId, req.body);
   res.status(201).json({ lesson });
 });
 
 router.put('/:id', requireAuth, validate(updateLessonSchema), async (req, res) => {
-  const lesson = await lessonService.updateLesson(param(req, 'id'), req.body);
+  const lesson = await lessonService.updateLesson(req.userId, param(req, 'id'), req.body);
   res.json({ lesson });
 });
 
 router.delete('/:id', requireAuth, async (req, res) => {
-  await lessonService.deleteLesson(param(req, 'id'));
+  await lessonService.deleteLesson(req.userId, param(req, 'id'));
   res.json({ message: 'Lesson deleted' });
 });
 
@@ -52,7 +52,7 @@ router.post('/:id/complete', requireAuth, async (req, res) => {
 });
 
 router.put('/module/:moduleId/reorder', requireAuth, async (req, res) => {
-  await lessonService.reorderLessons(param(req, 'moduleId'), req.body.lessonIds);
+  await lessonService.reorderLessons(req.userId, param(req, 'moduleId'), req.body.lessonIds);
   res.json({ message: 'Lessons reordered' });
 });
 

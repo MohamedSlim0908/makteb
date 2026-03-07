@@ -82,4 +82,19 @@ router.put('/:id/members/:userId/role', requireAuth, async (req, res) => {
   res.json({ membership });
 });
 
+router.post('/:id/invites', requireAuth, async (req, res) => {
+  const invite = await communityService.createInvite(req.userId, param(req, 'id'), req.body.email);
+  res.status(201).json({ invite });
+});
+
+router.get('/:id/invites', requireAuth, async (req, res) => {
+  const invites = await communityService.listInvites(req.userId, param(req, 'id'));
+  res.json({ invites });
+});
+
+router.delete('/:id/invites/:inviteId', requireAuth, async (req, res) => {
+  await communityService.deleteInvite(req.userId, param(req, 'id'), param(req, 'inviteId'));
+  res.json({ message: 'Invite deleted' });
+});
+
 export default router;

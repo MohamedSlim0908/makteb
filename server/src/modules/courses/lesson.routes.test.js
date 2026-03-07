@@ -13,6 +13,9 @@ vi.mock('../../lib/prisma.js', () => ({
       update: vi.fn(),
       delete: vi.fn(),
     },
+    module: {
+      findUnique: vi.fn(),
+    },
     enrollment: {
       findUnique: vi.fn(),
       update: vi.fn(),
@@ -94,6 +97,7 @@ describe('GET /:id', () => {
 // ── POST / ────────────────────────────────────────────────
 describe('POST /', () => {
   it('creates a lesson and returns 201', async () => {
+    prisma.module.findUnique.mockResolvedValue({ id: 'module-1', course: { creatorId: 'user-1' } });
     prisma.lesson.create.mockResolvedValue(LESSON);
 
     const res = await request(buildApp())
@@ -105,6 +109,7 @@ describe('POST /', () => {
   });
 
   it('defaults type to TEXT when not specified', async () => {
+    prisma.module.findUnique.mockResolvedValue({ id: 'module-1', course: { creatorId: 'user-1' } });
     prisma.lesson.create.mockResolvedValue(LESSON);
 
     await request(buildApp()).post('/').send({ moduleId: 'module-1', title: 'Lesson' });
@@ -128,6 +133,10 @@ describe('POST /', () => {
 // ── PUT /:id ──────────────────────────────────────────────
 describe('PUT /:id', () => {
   it('updates and returns the lesson', async () => {
+    prisma.lesson.findUnique.mockResolvedValue({
+      ...LESSON,
+      module: { course: { creatorId: 'user-1' } },
+    });
     const updated = { ...LESSON, title: 'Updated Title' };
     prisma.lesson.update.mockResolvedValue(updated);
 
@@ -143,6 +152,10 @@ describe('PUT /:id', () => {
 // ── DELETE /:id ───────────────────────────────────────────
 describe('DELETE /:id', () => {
   it('deletes the lesson and returns success', async () => {
+    prisma.lesson.findUnique.mockResolvedValue({
+      ...LESSON,
+      module: { course: { creatorId: 'user-1' } },
+    });
     prisma.lesson.delete.mockResolvedValue({});
 
     const res = await request(buildApp()).delete('/lesson-1');

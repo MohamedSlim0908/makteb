@@ -21,13 +21,27 @@ export async function getLesson(lessonId) {
   return lesson;
 }
 
-export async function createLesson({ moduleId, title, type, content, videoUrl, duration, order }) {
+export async function createLesson(userId, { moduleId, title, type, content, videoUrl, duration, order }) {
+  const mod = await prisma.module.findUnique({
+    where: { id: moduleId },
+    include: { course: { select: { creatorId: true } } },
+  });
+  if (!mod) throw new AppError('Module not found', 404);
+  if (mod.course.creatorId !== userId) throw new AppError('Not authorized', 403);
+
   return prisma.lesson.create({
     data: { moduleId, title, type: type || 'TEXT', content, videoUrl, duration, order: order ?? 0 },
   });
 }
 
-export async function updateLesson(lessonId, data) {
+export async function updateLesson(userId, lessonId, data) {
+  const lesson = await prisma.lesson.findUnique({
+    where: { id: lessonId },
+    include: { module: { include: { course: { select: { creatorId: true } } } } },
+  });
+  if (!lesson) throw new AppError('Lesson not found', 404);
+  if (lesson.module.course.creatorId !== userId) throw new AppError('Not authorized', 403);
+
   const { title, type, content, videoUrl, duration, order } = data;
   return prisma.lesson.update({
     where: { id: lessonId },
@@ -35,7 +49,14 @@ export async function updateLesson(lessonId, data) {
   });
 }
 
-export async function deleteLesson(lessonId) {
+export async function deleteLesson(userId, lessonId) {
+  const lesson = await prisma.lesson.findUnique({
+    where: { id: lessonId },
+    include: { module: { include: { course: { select: { creatorId: true } } } } },
+  });
+  if (!lesson) throw new AppError('Lesson not found', 404);
+  if (lesson.module.course.creatorId !== userId) throw new AppError('Not authorized', 403);
+
   await prisma.lesson.delete({ where: { id: lessonId } });
 }
 
@@ -75,7 +96,14 @@ export async function completeLesson(userId, lessonId) {
   return updated;
 }
 
-export async function reorderLessons(moduleId, lessonIds) {
+export async function reorderLessons(userId, moduleId, lessonIds) {
+  const mod = await prisma.module.findUnique({
+    where: { id: moduleId },
+    include: { course: { select: { creatorId: true } } },
+  });
+  if (!mod) throw new AppError('Module not found', 404);
+  if (mod.course.creatorId !== userId) throw new AppError('Not authorized', 403);
+
   const updates = lessonIds.map((id, index) =>
     prisma.lesson.update({ where: { id }, data: { order: index } })
   );

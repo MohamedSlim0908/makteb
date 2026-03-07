@@ -332,8 +332,8 @@ export function SettingsPage() {
     root.classList.remove('dark');
   }, [theme]);
 
-  const profileUrl = `skool.com/@${slugFromName(`${firstName} ${lastName}`) || 'username'}`;
-  const affiliateUrl = 'https://www.skool.com/signup?ref=cd7fe65010dc4e7c9d3f7a3371bd77ab';
+  const profileUrl = `makteb.com/@${slugFromName(`${firstName} ${lastName}`) || 'username'}`;
+  const affiliateUrl = 'https://www.makteb.com/signup?ref=cd7fe65010dc4e7c9d3f7a3371bd77ab';
 
   function copyAffiliateLink() {
     navigator.clipboard
