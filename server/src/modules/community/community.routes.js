@@ -8,6 +8,13 @@ import * as communityService from './community.service.js';
 
 const router = Router();
 
+const SORT_OPTIONS = {
+  popular: { members: { _count: 'desc' } },
+  newest: { createdAt: 'desc' },
+  'price-asc': { price: 'asc' },
+  'price-desc': { price: 'desc' },
+};
+
 const createCommunitySchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
@@ -22,8 +29,10 @@ const updateCommunitySchema = createCommunitySchema.partial();
 router.get('/', async (req, res) => {
   const search = query(req, 'search');
   const category = query(req, 'category');
+  const sortKey = query(req, 'sort');
+  const orderBy = SORT_OPTIONS[sortKey] || SORT_OPTIONS.popular;
   const pagination = parsePagination(req, 12);
-  const result = await communityService.listCommunities({ search, category, ...pagination });
+  const result = await communityService.listCommunities({ search, category, orderBy, ...pagination });
   res.json(result);
 });
 

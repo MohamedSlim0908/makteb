@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Search, ChevronDown } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Search, ChevronDown, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../lib/api';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -20,6 +20,16 @@ const CATEGORIES = [
   { name: 'Self-improvement', icon: '📚' },
 ];
 
+const VISIBLE_CATEGORIES = CATEGORIES.slice(0, 5);
+const MORE_CATEGORIES = CATEGORIES.slice(5);
+
+const SORT_OPTIONS = [
+  { value: 'popular', label: 'Most Popular' },
+  { value: 'newest', label: 'Newest' },
+  { value: 'price-asc', label: 'Price: Low to High' },
+  { value: 'price-desc', label: 'Price: High to Low' },
+];
+
 const CATEGORY_KEYWORDS = {
   Hobbies: ['hobby', 'art', 'craft', 'diy', 'painting', 'photography', 'gaming', 'travel'],
   Music: ['music', 'song', 'guitar', 'piano', 'singer', 'producer', 'audio', 'beat'],
@@ -31,61 +41,102 @@ const CATEGORY_KEYWORDS = {
   'Self-improvement': ['self improvement', 'productivity', 'mindset', 'habits', 'growth', 'career', 'learning'],
 };
 
-function normalizeCategory(value) {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[_\s]+/g, '-');
-}
-
-function extractCommunityCategories(community) {
-  const rawCategoryValues = [
-    community.category,
-    ...(Array.isArray(community.categories) ? community.categories : []),
-    ...(Array.isArray(community.tags) ? community.tags : []),
-    ...(Array.isArray(community.topics) ? community.topics : []),
-  ].filter(Boolean);
-
-  return new Set(rawCategoryValues.map((value) => normalizeCategory(value)));
-}
-
 function matchesCategory(community, activeCategory) {
   if (activeCategory === 'All') return true;
-
-  const normalizedActive = normalizeCategory(activeCategory);
-  const explicitCategories = extractCommunityCategories(community);
-  if (explicitCategories.has(normalizedActive)) return true;
-
   const text = `${community.name || ''} ${community.description || ''}`.toLowerCase();
   const keywords = CATEGORY_KEYWORDS[activeCategory] || [];
   return keywords.some((keyword) => text.includes(keyword.toLowerCase()));
 }
 
 export function DiscoverPage() {
-  const [searchInput, setSearchInput] = useState('');
-  const [activeCategory, setActiveCategory] = useState('All');
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  // URL-driven state
+  const page = parseInt(searchParams.get('page') || '1', 10);
+  const sort = searchParams.get('sort') || 'popular';
+  const searchQuery = searchParams.get('q') || '';
+
+  // Local state
+  const [searchInput, setSearchInput] = useState(searchQuery);
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
+
+  const sortRef = useRef(null);
+  const moreRef = useRef(null);
+
+  // Helper to update URL params (resets page to 1 unless page is explicitly set)
+  const updateParams = useCallback((updates) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      for (const [key, value] of Object.entries(updates)) {
+        if (value === null || value === undefined || value === '') {
+          next.delete(key);
+        } else {
+          next.set(key, value);
+        }
+      }
+      if (!('page' in updates)) next.delete('page');
+      return next;
+    });
+  }, [setSearchParams]);
+
+  // Debounce search input to URL
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const trimmed = searchInput.trim();
+      updateParams({ q: trimmed || null });
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchInput, updateParams]);
+
+  // Close dropdowns on click-outside or Escape
+  useEffect(() => {
+    function handleClick(e) {
+      if (sortRef.current && !sortRef.current.contains(e.target)) setIsSortOpen(false);
+      if (moreRef.current && !moreRef.current.contains(e.target)) setIsMoreOpen(false);
+    }
+    function handleEscape(e) {
+      if (e.key === 'Escape') {
+        setIsSortOpen(false);
+        setIsMoreOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, []);
+
+  // API query
+  const queryParams = new URLSearchParams();
+  queryParams.set('page', String(page));
+  queryParams.set('limit', '12');
+  queryParams.set('sort', sort);
+  if (searchQuery) queryParams.set('search', searchQuery);
+
   const { data: communitiesData, isLoading } = useQuery({
-    queryKey: ['communities', 'discover'],
+    queryKey: ['communities', 'discover', page, sort, searchQuery],
     queryFn: async () => {
-      const { data } = await api.get('/communities?page=1&limit=50');
+      const { data } = await api.get(`/communities?${queryParams}`);
       return data;
     },
     staleTime: 30_000,
+    placeholderData: keepPreviousData,
   });
 
   const communities = communitiesData?.communities ?? [];
+  const totalPages = communitiesData?.totalPages ?? 1;
 
-  const filteredCommunities = communities.filter((community) => {
-    const searchLower = searchInput.trim().toLowerCase();
-    const matchesSearch =
-      !searchLower ||
-      community.name?.toLowerCase().includes(searchLower) ||
-      community.description?.toLowerCase().includes(searchLower);
-    return matchesSearch && matchesCategory(community, activeCategory);
-  });
+  // Client-side category filtering (DB categories don't match frontend categories)
+  const filteredCommunities = communities.filter((c) => matchesCategory(c, activeCategory));
+
+  const moreIsActive = MORE_CATEGORIES.some((c) => c.name === activeCategory);
+  const activeMoreCategory = MORE_CATEGORIES.find((c) => c.name === activeCategory);
 
   return (
     <div className="min-h-[calc(100dvh-3.5rem)] bg-[#f5f5f5]">
@@ -106,26 +157,65 @@ export function DiscoverPage() {
           </p>
         </div>
 
-        {/* Search */}
-        <div className="max-w-[640px] mx-auto mb-8">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search for communities..."
-              className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 shadow-card transition-all"
-            />
+        {/* Search + Sort row */}
+        <div className="max-w-[640px] mx-auto mb-6">
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search for communities..."
+                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 shadow-card transition-all"
+              />
+            </div>
+
+            {/* Sort dropdown */}
+            <div className="relative" ref={sortRef}>
+              <button
+                onClick={() => setIsSortOpen(!isSortOpen)}
+                className="flex items-center gap-2 px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-card transition-colors whitespace-nowrap"
+              >
+                <ArrowUpDown className="w-4 h-4 text-gray-400" />
+                <span className="hidden sm:inline">
+                  {SORT_OPTIONS.find((o) => o.value === sort)?.label || 'Sort'}
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+              </button>
+              {isSortOpen && (
+                <div className="absolute top-full mt-1 right-0 w-48 bg-white rounded-xl border border-gray-200 shadow-dropdown z-20 py-1">
+                  {SORT_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        updateParams({ sort: option.value });
+                        setIsSortOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                        sort === option.value
+                          ? 'bg-gray-100 font-medium text-gray-900'
+                          : 'text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Categories */}
         <div className="flex items-center justify-center flex-wrap gap-2 mb-10">
-          {CATEGORIES.map((category) => (
+          {VISIBLE_CATEGORIES.map((category) => (
             <button
               key={category.name}
-              onClick={() => setActiveCategory(category.name)}
+              onClick={() => {
+                setActiveCategory(category.name);
+                updateParams({});
+              }}
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium transition-all ${
                 activeCategory === category.name
                   ? 'bg-gray-900 text-white shadow-sm'
@@ -136,10 +226,50 @@ export function DiscoverPage() {
               {category.name}
             </button>
           ))}
-          <button className="flex items-center gap-1 px-3.5 py-2 bg-white text-gray-600 border border-gray-200 rounded-full text-sm font-medium hover:bg-gray-50 transition-colors">
-            More
-            <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
-          </button>
+
+          {/* More dropdown */}
+          <div className="relative" ref={moreRef}>
+            <button
+              onClick={() => setIsMoreOpen(!isMoreOpen)}
+              className={`flex items-center gap-1 px-3.5 py-2 rounded-full text-sm font-medium transition-all ${
+                moreIsActive
+                  ? 'bg-gray-900 text-white shadow-sm'
+                  : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              {activeMoreCategory ? (
+                <>
+                  <span className="text-sm">{activeMoreCategory.icon}</span>
+                  {activeMoreCategory.name}
+                </>
+              ) : (
+                'More'
+              )}
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+            {isMoreOpen && (
+              <div className="absolute top-full mt-1 left-0 w-48 bg-white rounded-xl border border-gray-200 shadow-dropdown z-20 py-1">
+                {MORE_CATEGORIES.map((category) => (
+                  <button
+                    key={category.name}
+                    onClick={() => {
+                      setActiveCategory(category.name);
+                      updateParams({});
+                      setIsMoreOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 transition-colors ${
+                      activeCategory === category.name
+                        ? 'bg-gray-100 font-medium text-gray-900'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span>{category.icon}</span>
+                    {category.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Grid */}
@@ -173,7 +303,7 @@ export function DiscoverPage() {
                   )}
                   <div className="absolute top-3 left-3">
                     <Badge variant="default" className="bg-black/40 backdrop-blur-sm text-white border-0">
-                      #{index + 1}
+                      #{(page - 1) * 12 + index + 1}
                     </Badge>
                   </div>
                 </div>
@@ -213,6 +343,31 @@ export function DiscoverPage() {
             title="No communities found"
             description="Try adjusting your search or category filter."
           />
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-3 mt-10">
+            <button
+              onClick={() => updateParams({ page: String(page - 1) })}
+              disabled={page <= 1}
+              className="flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Previous
+            </button>
+            <span className="text-sm text-gray-500">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => updateParams({ page: String(page + 1) })}
+              disabled={page >= totalPages}
+              className="flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         )}
       </div>
     </div>

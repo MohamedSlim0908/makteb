@@ -13,7 +13,7 @@ const DEFAULT_COMMUNITY_LEVELS = [
   { name: 'Legend', minPoints: 1000, order: 5 },
 ];
 
-export async function listCommunities({ search, category, page, skip, take }) {
+export async function listCommunities({ search, category, page, skip, take, orderBy }) {
   const where = { visibility: 'PUBLIC' };
   if (search) {
     where.OR = [
@@ -30,7 +30,7 @@ export async function listCommunities({ search, category, page, skip, take }) {
       where,
       skip,
       take,
-      orderBy: { createdAt: 'desc' },
+      orderBy: orderBy || { createdAt: 'desc' },
       include: {
         creator: { select: USER_PUBLIC_SELECT },
         _count: { select: { members: true, courses: true } },
