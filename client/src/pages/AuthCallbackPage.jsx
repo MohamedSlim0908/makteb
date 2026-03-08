@@ -9,31 +9,31 @@ import { Button } from '../components/ui/Button';
 export function AuthCallbackPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [error, setError] = useState(null);
+  const token = searchParams.get('token');
+  const authError = searchParams.get('error');
+
+  const [error] = useState(() => {
+    if (authError) return 'Sign in failed. Please try again.';
+    if (!token) return 'No authentication token received. Please try signing in again.';
+    return null;
+  });
 
   useEffect(() => {
-    const token = searchParams.get('token');
-    const authError = searchParams.get('error');
-
     if (authError) {
-      setError('Sign in failed. Please try again.');
       toast.error('Sign in failed. Please try again.');
       return;
     }
+    if (!token) return;
 
-    if (token) {
-      localStorage.setItem('accessToken', token);
-      setAccessToken(token);
-      api.get('/auth/me').then(({ data }) => {
-        const dest = data.user?.role === 'CREATOR' ? '/creator/community' : '/discover';
-        navigate(dest, { replace: true });
-      }).catch(() => {
-        navigate('/discover', { replace: true });
-      });
-    } else {
-      setError('No authentication token received. Please try signing in again.');
-    }
-  }, [searchParams, navigate]);
+    localStorage.setItem('accessToken', token);
+    setAccessToken(token);
+    api.get('/auth/me').then(({ data }) => {
+      const dest = data.user?.role === 'CREATOR' ? '/creator/community' : '/discover';
+      navigate(dest, { replace: true });
+    }).catch(() => {
+      navigate('/discover', { replace: true });
+    });
+  }, [token, authError, navigate]);
 
   if (error) {
     return (

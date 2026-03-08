@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -611,13 +611,15 @@ function LevelModal({ isOpen, onClose, title, initial, onSave, isPending }) {
   const [minPoints, setMinPoints] = useState(initial?.minPoints ?? 0);
   const [desc, setDesc] = useState(initial?.unlockDescription || '');
 
-  // Reset form when initial changes
+  // Reset form when initial changes (state-during-render pattern)
+  const [prevKey, setPrevKey] = useState(initial?.id || 'new');
   const key = initial?.id || 'new';
-  useState(() => {
+  if (prevKey !== key) {
+    setPrevKey(key);
     setName(initial?.name || '');
     setMinPoints(initial?.minPoints ?? 0);
     setDesc(initial?.unlockDescription || '');
-  });
+  }
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -653,7 +655,7 @@ function LevelModal({ isOpen, onClose, title, initial, onSave, isPending }) {
 
 // ─── Categories Settings ─────────────────────────────────────────────────────
 
-function CategoriesSettings({ community }) {
+function CategoriesSettings() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-gray-500">
@@ -676,6 +678,8 @@ function CategoriesSettings({ community }) {
 
 // ─── Metrics Settings ────────────────────────────────────────────────────────
 
+const WEEK_AGO = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
 function MetricsSettings({ community }) {
   const { data: members = [] } = useMembers(community.id);
 
@@ -683,11 +687,9 @@ function MetricsSettings({ community }) {
   const postCount = community._count?.posts || 0;
   const courseCount = community._count?.courses || 0;
 
-  const recentMembers = members.filter((m) => {
-    const joined = new Date(m.joinedAt);
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    return joined >= weekAgo;
-  });
+  const recentMembers = useMemo(() => {
+    return members.filter((m) => new Date(m.joinedAt) >= WEEK_AGO);
+  }, [members]);
 
   const stats = [
     { label: 'Total members', value: memberCount, icon: Users, color: 'from-blue-400 to-blue-600' },

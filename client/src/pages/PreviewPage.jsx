@@ -97,7 +97,9 @@ export function PreviewPage() {
         </div>
 
         <ul className="grid gap-4 sm:grid-cols-2">
-          {PAGES.map(({ title, path, description, icon: Icon }) => (
+          {PAGES.map(({ title, path, description, icon }) => {
+            const Icon = icon;
+            return (
             <li key={path}>
               <Link
                 to={path}
@@ -120,7 +122,8 @@ export function PreviewPage() {
                 <ExternalLink className="h-4 w-4 shrink-0 text-gray-400 group-hover:text-gray-600 transition-colors" />
               </Link>
             </li>
-          ))}
+          );
+          })}
         </ul>
 
         <p className="text-sm text-gray-400 mt-8">
