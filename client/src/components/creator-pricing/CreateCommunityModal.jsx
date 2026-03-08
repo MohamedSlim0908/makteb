@@ -81,15 +81,18 @@ export function CreateCommunityModal({ isOpen, plan, onClose, onSubmit }) {
     };
   }, [isOpen, onClose]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    setGroupName('');
-    setPrivacyType('private');
-    setCardNumber('');
-    setExpiry('');
-    setCvc('');
-  }, [isOpen, plan?.id]);
+  const [prevResetKey, setPrevResetKey] = useState(`${isOpen}-${plan?.id}`);
+  const currentResetKey = `${isOpen}-${plan?.id}`;
+  if (currentResetKey !== prevResetKey) {
+    setPrevResetKey(currentResetKey);
+    if (isOpen) {
+      setGroupName('');
+      setPrivacyType('private');
+      setCardNumber('');
+      setExpiry('');
+      setCvc('');
+    }
+  }
 
   const chargeDateText = useMemo(() => getTrialChargeDate(), []);
 

@@ -23,19 +23,22 @@ export function CommunitySettingsModal({ isOpen, community, onClose, onSave }) {
   const [avatarInitials, setAvatarInitials] = useState(community?.avatarInitials || 'SB');
   const [avatarColor, setAvatarColor] = useState(community?.avatarColor || '#767676');
 
-  useEffect(() => {
-    if (!isOpen || !community) return;
-
-    setCommunityName(community.name || '');
-    setCommunityUrl(community.url || '');
-    setDescription(community.description || '');
-    setPrivacyType(community.privacyType || 'private');
-    setIconImage(community.iconImage || '');
-    setCoverImage(community.coverImage || '');
-    setAvatarInitials(community.avatarInitials || 'SB');
-    setAvatarColor(community.avatarColor || '#767676');
-    setActiveSection('General');
-  }, [community, isOpen]);
+  const [prevKey, setPrevKey] = useState(`${isOpen}-${community?.id}`);
+  const currentKey = `${isOpen}-${community?.id}`;
+  if (currentKey !== prevKey) {
+    setPrevKey(currentKey);
+    if (isOpen && community) {
+      setCommunityName(community.name || '');
+      setCommunityUrl(community.url || '');
+      setDescription(community.description || '');
+      setPrivacyType(community.privacyType || 'private');
+      setIconImage(community.iconImage || '');
+      setCoverImage(community.coverImage || '');
+      setAvatarInitials(community.avatarInitials || 'SB');
+      setAvatarColor(community.avatarColor || '#767676');
+      setActiveSection('General');
+    }
+  }
 
   useEffect(() => {
     if (!isOpen) return undefined;
