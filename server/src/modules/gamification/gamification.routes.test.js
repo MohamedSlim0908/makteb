@@ -50,7 +50,7 @@ describe('GET /leaderboard/:communityId', () => {
       { rank: 1, user: { id: 'u1', name: 'Ali', avatar: null }, points: 200, level: 'Expert' },
       { rank: 2, user: { id: 'u2', name: 'Sara', avatar: null }, points: 80, level: 'Active' },
     ];
-    getLeaderboard.mockResolvedValue(mockLeaderboard);
+    getLeaderboard.mockResolvedValue({ leaderboard: mockLeaderboard, total: 2 });
 
     const res = await request(buildApp()).get('/leaderboard/com-1');
 
@@ -58,23 +58,27 @@ describe('GET /leaderboard/:communityId', () => {
     expect(res.body.leaderboard).toHaveLength(2);
     expect(res.body.leaderboard[0].rank).toBe(1);
     expect(res.body.leaderboard[0].points).toBe(200);
+    expect(res.body.total).toBe(2);
+    expect(res.body.page).toBe(1);
+    expect(res.body.totalPages).toBe(1);
   });
 
-  it('calls getLeaderboard with the correct communityId', async () => {
-    getLeaderboard.mockResolvedValue([]);
+  it('calls getLeaderboard with the correct communityId and pagination', async () => {
+    getLeaderboard.mockResolvedValue({ leaderboard: [], total: 0 });
 
     await request(buildApp()).get('/leaderboard/com-xyz');
 
-    expect(getLeaderboard).toHaveBeenCalledWith('com-xyz');
+    expect(getLeaderboard).toHaveBeenCalledWith('com-xyz', { skip: 0, take: 20 });
   });
 
   it('returns an empty leaderboard when no entries', async () => {
-    getLeaderboard.mockResolvedValue([]);
+    getLeaderboard.mockResolvedValue({ leaderboard: [], total: 0 });
 
     const res = await request(buildApp()).get('/leaderboard/empty-com');
 
     expect(res.status).toBe(200);
     expect(res.body.leaderboard).toEqual([]);
+    expect(res.body.totalPages).toBe(0);
   });
 });
 
