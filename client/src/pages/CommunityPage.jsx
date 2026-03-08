@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
 import {
   keepPreviousData,
   useMutation,
@@ -66,9 +66,11 @@ export function CommunityPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { shellSearch } = useOutletContext();
 
   const [activeCategory, setActiveCategory] = useState('ALL');
   const [page, setPage] = useState(1);
+  const [leaderboardPage, setLeaderboardPage] = useState(1);
   const [postTitle, setPostTitle] = useState('');
   const [postContent, setPostContent] = useState('');
   const [postCategory, setPostCategory] = useState('');
@@ -135,12 +137,34 @@ export function CommunityPage() {
   const totalPages = postsData?.totalPages ?? 0;
   const isPageTransitioning = postsFetching && !postsLoading;
 
-  // Leaderboard
-  const { data: leaderboard, isLoading: leaderboardLoading } = useQuery({
+  // Leaderboard (sidebar — unpaginated)
+  const { data: leaderboardData, isLoading: leaderboardLoading } = useQuery({
     queryKey: ['community-leaderboard', communityId],
     queryFn: async () => {
       const { data } = await api.get(`/gamification/leaderboard/${communityId}`);
-      return data.leaderboard;
+      return data;
+    },
+    enabled: !!communityId && isMember,
+  });
+  const leaderboard = leaderboardData?.leaderboard;
+
+  // Leaderboard (full tab — paginated)
+  const { data: leaderboardTabData } = useQuery({
+    queryKey: ['community-leaderboard-tab', communityId, leaderboardPage],
+    queryFn: async () => {
+      const { data } = await api.get(`/gamification/leaderboard/${communityId}?page=${leaderboardPage}&limit=20`);
+      return data;
+    },
+    enabled: !!communityId && isMember && activeTab === 'leaderboards',
+    placeholderData: keepPreviousData,
+  });
+
+  // Levels (for member level display)
+  const { data: levels } = useQuery({
+    queryKey: ['community-levels', communityId],
+    queryFn: async () => {
+      const { data } = await api.get(`/gamification/levels/${communityId}`);
+      return data.levels;
     },
     enabled: !!communityId && isMember,
   });
@@ -530,10 +554,22 @@ export function CommunityPage() {
 
         {activeTab === 'calendar' && <CalendarMonthView />}
 
-        {activeTab === 'members' && <MembersList members={members || []} />}
+        {activeTab === 'members' && (
+          <MembersList
+            members={members || []}
+            searchQuery={shellSearch}
+            leaderboard={leaderboard}
+            levels={levels}
+          />
+        )}
 
         {activeTab === 'leaderboards' && (
-          <Leaderboard entries={leaderboardLoading ? [] : leaderboard || []} />
+          <Leaderboard
+            entries={leaderboardTabData?.leaderboard || (leaderboardLoading ? [] : leaderboard || [])}
+            page={leaderboardTabData?.page || 1}
+            totalPages={leaderboardTabData?.totalPages || 1}
+            onPageChange={setLeaderboardPage}
+          />
         )}
 
         {activeTab === 'about' && (
