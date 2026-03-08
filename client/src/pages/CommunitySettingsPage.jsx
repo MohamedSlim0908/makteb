@@ -1,4 +1,4 @@
-import { useState, useRef,useMemo } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -612,9 +612,10 @@ function LevelModal({ isOpen, onClose, title, initial, onSave, isPending }) {
   const [desc, setDesc] = useState(initial?.unlockDescription || '');
 
   // Reset form when initial changes (state-during-render pattern)
-  const [prevInitial, setPrevInitial] = useState(initial);
-  if (prevInitial !== initial) {
-    setPrevInitial(initial);
+  const [prevKey, setPrevKey] = useState(initial?.id || 'new');
+  const key = initial?.id || 'new';
+  if (prevKey !== key) {
+    setPrevKey(key);
     setName(initial?.name || '');
     setMinPoints(initial?.minPoints ?? 0);
     setDesc(initial?.unlockDescription || '');

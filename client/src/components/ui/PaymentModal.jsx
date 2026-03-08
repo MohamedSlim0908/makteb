@@ -2,6 +2,7 @@ import { X, CreditCard, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from './Button';
 import { useInitiatePayment } from '../../features/payments/useInitiatePayment';
 
+// TODO: wire onSuccess callback after payment verification flow is implemented
 export function PaymentModal({ isOpen, onClose, type, referenceId, amount, itemName, onSuccess: _onSuccess }) {
   const initPayment = useInitiatePayment();
 
