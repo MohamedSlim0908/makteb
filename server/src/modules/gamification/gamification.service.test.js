@@ -125,61 +125,89 @@ describe('getLeaderboard()', () => {
   ];
 
   it('returns ranked leaderboard with levels', async () => {
-    prisma.pointEntry.groupBy.mockResolvedValue(mockEntries);
+    // First groupBy call is for total count, second is for paginated results
+    prisma.pointEntry.groupBy
+      .mockResolvedValueOnce(mockEntries) // total count
+      .mockResolvedValueOnce(mockEntries); // paginated
     prisma.user.findMany.mockResolvedValue(mockUsers);
     prisma.level.findMany.mockResolvedValue(LEVELS);
 
     const result = await getLeaderboard(COMMUNITY_ID);
 
-    expect(result).toHaveLength(3);
-    expect(result[0].rank).toBe(1);
-    expect(result[0].user.name).toBe('Ali Ben Salah');
-    expect(result[0].points).toBe(200);
-    expect(result[0].level).toBe('Expert'); // 200 >= 150
+    expect(result.leaderboard).toHaveLength(3);
+    expect(result.total).toBe(3);
+    expect(result.leaderboard[0].rank).toBe(1);
+    expect(result.leaderboard[0].user.name).toBe('Ali Ben Salah');
+    expect(result.leaderboard[0].points).toBe(200);
+    expect(result.leaderboard[0].level).toBe('Expert'); // 200 >= 150
   });
 
   it('assigns correct levels based on points', async () => {
-    prisma.pointEntry.groupBy.mockResolvedValue(mockEntries);
+    prisma.pointEntry.groupBy
+      .mockResolvedValueOnce(mockEntries)
+      .mockResolvedValueOnce(mockEntries);
     prisma.user.findMany.mockResolvedValue(mockUsers);
     prisma.level.findMany.mockResolvedValue(LEVELS);
 
     const result = await getLeaderboard(COMMUNITY_ID);
 
-    expect(result[1].level).toBe('Active');  // 80 >= 50
-    expect(result[2].level).toBe('Newcomer'); // 30 < 50
+    expect(result.leaderboard[1].level).toBe('Active');  // 80 >= 50
+    expect(result.leaderboard[2].level).toBe('Newcomer'); // 30 < 50
   });
 
-  it('returns empty array when no entries', async () => {
-    prisma.pointEntry.groupBy.mockResolvedValue([]);
+  it('returns empty leaderboard when no entries', async () => {
+    prisma.pointEntry.groupBy
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
     prisma.user.findMany.mockResolvedValue([]);
     prisma.level.findMany.mockResolvedValue(LEVELS);
 
     const result = await getLeaderboard(COMMUNITY_ID);
 
-    expect(result).toEqual([]);
+    expect(result.leaderboard).toEqual([]);
+    expect(result.total).toBe(0);
   });
 
-  it('defaults to limit 20', async () => {
-    prisma.pointEntry.groupBy.mockResolvedValue([]);
+  it('defaults to skip 0 and take 20', async () => {
+    prisma.pointEntry.groupBy
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
     prisma.user.findMany.mockResolvedValue([]);
     prisma.level.findMany.mockResolvedValue(LEVELS);
 
     await getLeaderboard(COMMUNITY_ID);
 
     expect(prisma.pointEntry.groupBy).toHaveBeenCalledWith(
-      expect.objectContaining({ take: 20 })
+      expect.objectContaining({ skip: 0, take: 20 })
     );
   });
 
-  it('respects custom limit', async () => {
-    prisma.pointEntry.groupBy.mockResolvedValue([]);
+  it('respects custom skip and take', async () => {
+    prisma.pointEntry.groupBy
+      .mockResolvedValueOnce(mockEntries) // total
+      .mockResolvedValueOnce([]); // paginated (page 2 empty)
     prisma.user.findMany.mockResolvedValue([]);
     prisma.level.findMany.mockResolvedValue(LEVELS);
 
-    await getLeaderboard(COMMUNITY_ID, 5);
+    await getLeaderboard(COMMUNITY_ID, { skip: 20, take: 5 });
 
     expect(prisma.pointEntry.groupBy).toHaveBeenCalledWith(
-      expect.objectContaining({ take: 5 })
+      expect.objectContaining({ skip: 20, take: 5 })
     );
+  });
+
+  it('computes correct ranks with skip offset', async () => {
+    const page2Entries = [
+      { userId: 'u4', _sum: { amount: 20 } },
+    ];
+    prisma.pointEntry.groupBy
+      .mockResolvedValueOnce([...mockEntries, ...page2Entries]) // total
+      .mockResolvedValueOnce(page2Entries); // paginated
+    prisma.user.findMany.mockResolvedValue([{ id: 'u4', name: 'User 4', avatar: null }]);
+    prisma.level.findMany.mockResolvedValue(LEVELS);
+
+    const result = await getLeaderboard(COMMUNITY_ID, { skip: 3, take: 5 });
+
+    expect(result.leaderboard[0].rank).toBe(4); // skip=3, index=0 → rank 4
   });
 });

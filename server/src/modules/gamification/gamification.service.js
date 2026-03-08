@@ -39,13 +39,21 @@ export async function getUserPoints(userId, communityId) {
   return result._sum.amount || 0;
 }
 
-export async function getLeaderboard(communityId, limit = 20) {
+export async function getLeaderboard(communityId, { skip = 0, take = 20 } = {}) {
+  // Get total unique users with points
+  const allGroups = await prisma.pointEntry.groupBy({
+    by: ['userId'],
+    where: { communityId },
+  });
+  const total = allGroups.length;
+
   const entries = await prisma.pointEntry.groupBy({
     by: ['userId'],
     where: { communityId },
     _sum: { amount: true },
     orderBy: { _sum: { amount: 'desc' } },
-    take: limit,
+    skip,
+    take,
   });
 
   const userIds = entries.map((e) => e.userId);
@@ -59,16 +67,18 @@ export async function getLeaderboard(communityId, limit = 20) {
     orderBy: { minPoints: 'desc' },
   });
 
-  return entries.map((entry, index) => {
+  const leaderboard = entries.map((entry, index) => {
     const user = users.find((u) => u.id === entry.userId);
     const points = entry._sum.amount || 0;
     const level = levels.find((l) => points >= l.minPoints);
     return {
-      rank: index + 1,
+      rank: skip + index + 1,
       user,
       points,
       level: level?.name || 'Newcomer',
       levelIcon: level?.badgeIcon,
     };
   });
+
+  return { leaderboard, total };
 }

@@ -20,7 +20,7 @@ import { useUnreadCount } from '../../features/notifications/useUnreadCount';
 import { NotificationPanel } from './NotificationPanel';
 import { Avatar } from '../ui/Avatar';
 
-export function Navbar() {
+export function Navbar({ shellSearch, onShellSearchChange }) {
   const { user, logout } = useAuth();
   const { pathname, search } = useLocation();
   const navigate = useNavigate();
@@ -45,7 +45,7 @@ export function Navbar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [shellSearch, setShellSearch] = useState('');
+
 
   const brandMenuRef = useRef(null);
   const userMenuRef = useRef(null);
@@ -387,8 +387,8 @@ export function Navbar() {
               <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 value={shellSearch}
-                onChange={(e) => setShellSearch(e.target.value)}
-                placeholder="Search"
+                onChange={(e) => onShellSearchChange(e.target.value)}
+                placeholder={isCommunityRoute && activeCommunityTab === 'members' ? 'Search members...' : 'Search'}
                 className="h-9 w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-700 outline-none focus:border-gray-300 focus:bg-white transition-colors"
               />
             </div>

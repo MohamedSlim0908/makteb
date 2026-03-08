@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { param } from '../../lib/params.js';
+import { param, parsePagination } from '../../lib/params.js';
 import { prisma } from '../../lib/prisma.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { getUserPoints, getLeaderboard } from './gamification.service.js';
@@ -15,8 +15,9 @@ function calculateProgressToNextLevel(points, currentLevel, nextLevel) {
 }
 
 router.get('/leaderboard/:communityId', async (req, res) => {
-  const leaderboard = await getLeaderboard(param(req, 'communityId'));
-  res.json({ leaderboard });
+  const { page, skip, take } = parsePagination(req, 20);
+  const { leaderboard, total } = await getLeaderboard(param(req, 'communityId'), { skip, take });
+  res.json({ leaderboard, total, page, totalPages: Math.ceil(total / take) });
 });
 
 router.get('/points/:communityId', requireAuth, async (req, res) => {

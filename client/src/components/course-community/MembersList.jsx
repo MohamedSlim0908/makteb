@@ -1,8 +1,14 @@
+import { useMemo } from 'react';
 import { MessageCircle, Users } from 'lucide-react';
 import { Avatar } from '../ui/Avatar';
 import { Skeleton } from '../ui/Skeleton';
 import { EmptyState } from '../ui/EmptyState';
-import { getMemberLocation, getMemberPresence } from './mockData';
+
+const ROLE_BADGE_CONFIG = {
+  OWNER: { label: 'Owner', className: 'bg-purple-100 text-purple-700' },
+  ADMIN: { label: 'Admin', className: 'bg-blue-100 text-blue-700' },
+  MODERATOR: { label: 'Mod', className: 'bg-green-100 text-green-700' },
+};
 
 function buildHandle(member) {
   const base = (member.user?.name || 'member').toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -18,7 +24,23 @@ function formatJoinedDate(value) {
   });
 }
 
-export function MembersList({ members = [], isLoading = false }) {
+function computeMemberLevel(userId, leaderboard, levels) {
+  const entry = leaderboard?.find(e => e.user?.id === userId);
+  if (!entry) return { levelName: 'Newcomer', points: 0 };
+  const points = entry.points || 0;
+  if (!levels?.length) return { levelName: entry.level || 'Newcomer', points };
+  const sortedDesc = [...levels].sort((a, b) => b.minPoints - a.minPoints);
+  const matched = sortedDesc.find(l => points >= l.minPoints);
+  return { levelName: matched?.name || 'Newcomer', points };
+}
+
+export function MembersList({ members = [], isLoading = false, searchQuery, leaderboard, levels }) {
+  const filteredMembers = useMemo(() => {
+    if (!searchQuery?.trim()) return members;
+    const q = searchQuery.trim().toLowerCase();
+    return members.filter(m => (m.user?.name || '').toLowerCase().includes(q));
+  }, [members, searchQuery]);
+
   if (isLoading) {
     return (
       <div className="space-y-0">
@@ -27,29 +49,38 @@ export function MembersList({ members = [], isLoading = false }) {
     );
   }
 
+  const isFiltering = searchQuery?.trim();
+
   return (
     <div className="space-y-0">
-      {members.map((member) => {
-        const presence = getMemberPresence(member.user?.id || member.id);
-        const location = getMemberLocation(member.user?.id || member.id);
+      {isFiltering && (
+        <p className="text-sm text-gray-500 mb-3">
+          Showing {filteredMembers.length} of {members.length} members
+        </p>
+      )}
+
+      {filteredMembers.map((member) => {
+        const badge = ROLE_BADGE_CONFIG[member.role];
+        const { levelName, points } = computeMemberLevel(member.user?.id || member.userId, leaderboard, levels);
         return (
           <div
             key={member.id}
             className="flex items-center justify-between py-4 border-b border-gray-100 last:border-0"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="relative">
-                <Avatar src={member.user?.avatar} name={member.user?.name} size="lg" />
-                {presence.isOnline && (
-                  <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full" />
-                )}
-              </div>
+              <Avatar src={member.user?.avatar} name={member.user?.name} size="lg" />
               <div className="min-w-0">
-                <p className="font-semibold text-gray-900">{member.user?.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-gray-900">{member.user?.name}</p>
+                  {badge && (
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${badge.className}`}>
+                      {badge.label}
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-gray-500">{buildHandle(member)}</p>
                 <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
-                  <span>{presence.isOnline ? 'Online' : `${presence.lastSeenMinutes}m ago`}</span>
-                  <span>{location.city}</span>
+                  <span>{levelName} · {points} pts</span>
                   <span>Joined {formatJoinedDate(member.joinedAt)}</span>
                 </div>
               </div>
@@ -65,11 +96,11 @@ export function MembersList({ members = [], isLoading = false }) {
         );
       })}
 
-      {!members.length && (
+      {filteredMembers.length === 0 && (
         <EmptyState
           icon={Users}
-          title="No members yet"
-          description="Members will appear here once they join."
+          title={isFiltering ? 'No members found' : 'No members yet'}
+          description={isFiltering ? 'Try a different search term.' : 'Members will appear here once they join.'}
         />
       )}
     </div>
